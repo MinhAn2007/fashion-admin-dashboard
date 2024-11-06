@@ -5,7 +5,6 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 
 const rootElement = document.getElementById('root');
-rootElement.style.height = '100vh';
 
 const root = ReactDOM.createRoot(rootElement);
 root.render(

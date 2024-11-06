@@ -3,7 +3,7 @@ import { FiHome, FiShoppingBag, FiUsers, FiSettings } from 'react-icons/fi';
 
 const Sidebar = () => {
   return (
-    <div className="w-64 max-h-full min-h-full bg-gray-800 text-white flex flex-col p-4">
+    <div className="w-48 max-h-full min-h-full bg-gray-800 text-white flex flex-col p-4">
       <h1 className="text-2xl font-bold mb-6">A&L Admin</h1>
       <ul>
         <li className="flex items-center mb-4">
