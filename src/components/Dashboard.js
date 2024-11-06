@@ -15,7 +15,7 @@ const Dashboard = () => {
   const API = process.env.REACT_APP_API_ENDPOINT;
   const fetchDashboardData = async () => {
     try {
-      const response = await fetch(`${API}/api/orders/dashboard`);
+      const response = await fetch(`${API}/api/orders/dashboard/total`);
       const data = await response.json();  
       console.log(data);
 
@@ -79,9 +79,9 @@ const Dashboard = () => {
 
       <div className="flex space-x-12">
         <div className="w-1/2 bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4">
+          <h6 className="text-lg font-semibold mb-4">
             Danh sách đơn hàng cần xử lý
-          </h3>
+          </h6>
           <table className="min-w-full table-auto">
             <thead>
               <tr className="bg-gray-100">
