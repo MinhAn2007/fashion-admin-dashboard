@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import StatsCard from "./StatsCard";
 import Chart from "./Chart";
+import { formatPrice } from "../utils/FormatPrice";
 
 const Dashboard = () => {
   const [timePeriod, setTimePeriod] = useState("Today");
@@ -11,29 +12,38 @@ const Dashboard = () => {
     totalOrders: 0,
   });
   const [pendingOrders, setPendingOrders] = useState(5);
+  const API = process.env.REACT_APP_API_ENDPOINT;
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch(`${API}/api/orders/dashboard`);
+      const data = await response.json();  
+      console.log(data);
+
+      setDashboardData(data.data);
+      console.log("dashboardData", dashboardData);
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    }
+  };
 
   useEffect(() => {
-    fetch(`/api/dashboard?timePeriod=${timePeriod}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setDashboardData({
-          totalSales: data.totalSales,
-          productsSold: data.productsSold,
-          newCustomers: data.newCustomers,
-          totalOrders: data.totalOrders,
-        });
-        setPendingOrders((prev) => data.pendingOrders || prev);
-      });
+    fetchDashboardData();
   }, [timePeriod]);
 
-  // Sample data for recent activities
   const recentActivities = [
     { id: 1, text: "Đơn hàng #1234 đã được hoàn thành", time: "Hôm nay" },
-    { id: 2, text: "Sản phẩm mới 'Áo thun mùa hè' đã được thêm", time: "Hôm qua" },
-    { id: 3, text: "Khách hàng mới 'Nguyễn Văn A' đã đăng ký", time: "2 ngày trước" },
+    {
+      id: 2,
+      text: "Sản phẩm mới 'Áo thun mùa hè' đã được thêm",
+      time: "Hôm qua",
+    },
+    {
+      id: 3,
+      text: "Khách hàng mới 'Nguyễn Văn A' đã đăng ký",
+      time: "2 ngày trước",
+    },
   ];
 
-  // Sample data for pending orders
   const pendingOrdersList = [
     { id: 101, name: "Đơn hàng #101", status: "Chờ xử lý", date: "01/11/2024" },
     { id: 102, name: "Đơn hàng #102", status: "Chờ xử lý", date: "02/11/2024" },
@@ -42,32 +52,36 @@ const Dashboard = () => {
 
   return (
     <div className="p-6 flex flex-col space-y-6">
-      <div className="flex flex-wrap space-x-4 gap-10">
-        <StatsCard title="Total Sales" value={`${dashboardData.totalSales}₫`} color="bg-blue-100" />
-        <StatsCard title="Products Sold" value={dashboardData.productsSold} color="bg-green-100" />
-        <StatsCard title="New Customers" value={dashboardData.newCustomers} color="bg-yellow-100" />
-        <StatsCard title="Total Orders" value={dashboardData.totalOrders} color="bg-red-100" />
-
-        <div className="flex h-1/2">
-          <select
-            value={timePeriod}
-            onChange={(e) => setTimePeriod(e.target.value)}
-            className="p-2 bg-white border border-gray-300 rounded-lg shadow focus:outline-none focus:border-blue-500"
-          >
-            <option value="Today">Hôm nay</option>
-            <option value="This Week">Tuần này</option>
-            <option value="This Month">Tháng này</option>
-            <option value="This Year">Năm nay</option>
-          </select>
-        </div>
+      <div className="flex flex-wrap space-x-4 justify-between">
+        <StatsCard
+          title="Doanh thu tổng"
+          value={formatPrice(dashboardData.totalSales)}
+          color="bg-blue-100"
+        />
+        <StatsCard
+          title="Sản phẩm đã bán"
+          value={dashboardData.productsSold}
+          color="bg-green-100"
+        />
+        <StatsCard
+          title="Khách hàng"
+          value={dashboardData.newCustomers}
+          color="bg-yellow-100"
+        />
+        <StatsCard
+          title="Tổng số đơn hàng"
+          value={dashboardData.totalOrders}
+          color="bg-red-100"
+        />
       </div>
 
       <Chart />
 
       <div className="flex space-x-12">
-        {/* Left Column: Pending Orders */}
         <div className="w-1/2 bg-white p-4 rounded-lg shadow-md">
-          <h3 className="text-lg font-semibold mb-4">Danh sách đơn hàng cần xử lý</h3>
+          <h3 className="text-lg font-semibold mb-4">
+            Danh sách đơn hàng cần xử lý
+          </h3>
           <table className="min-w-full table-auto">
             <thead>
               <tr className="bg-gray-100">
@@ -88,7 +102,6 @@ const Dashboard = () => {
           </table>
         </div>
 
-        {/* Right Column: Recent Activities Timeline */}
         <div className="w-1/2 bg-white p-4 rounded-lg shadow-md">
           <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
           <div className="relative pl-6">
