@@ -4,12 +4,22 @@ body {
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  -moz-osx-font-smoothing: grayscale; 
 }
 
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
+}
+
+body {
+  overflow: auto;
+  -ms-overflow-style: none; 
+  scrollbar-width: none;  
+}
+
+body::-webkit-scrollbar {
+  display: none;
 }
 
 @tailwind base;

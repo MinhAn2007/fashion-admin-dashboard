@@ -1,17 +1,22 @@
-import React from 'react';
-import { FiHome, FiShoppingBag, FiUsers, FiSettings } from 'react-icons/fi';
+import React from "react";
+import { FiHome, FiShoppingBag, FiUsers, FiSettings } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
 const Sidebar = () => {
   return (
-    <div className="w-48 max-h-full min-h-full bg-gray-800 text-white flex flex-col p-4">
+    <div className="w-48 h-dvh min-h-screen bg-gray-800 text-white flex flex-col p-4">
       <h1 className="text-2xl font-bold mb-6">A&L Admin</h1>
       <ul>
-        <li className="flex items-center mb-4">
-          <FiHome className="mr-2" /> Trang chủ
-        </li>
-        <li className="flex items-center mb-4">
-          <FiShoppingBag className="mr-2" /> Đơn hàng
-        </li>
+        <Link to="/" className="flex items-center mb-4">
+          <li className="flex items-center">
+            <FiHome className="mr-2" /> Trang chủ
+          </li>
+        </Link>
+        <Link to="/product" className="flex items-center mb-4">
+          <li className="flex items-center">
+            <FiShoppingBag className="mr-2" /> Đơn hàng
+          </li>
+        </Link>
         <li className="flex items-center mb-4">
           <FiShoppingBag className="mr-2" /> Sản phẩm
         </li>
@@ -24,6 +29,6 @@ const Sidebar = () => {
       </ul>
     </div>
   );
-}
+};
 
 export default Sidebar;
