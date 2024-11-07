@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Search, Plus, Edit2, Trash2, ArrowUpDown, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 
 const ITEMS_PER_PAGE = 10;
@@ -90,9 +90,9 @@ const ProductDashboard = () => {
 
   const topSellingProducts = useMemo(() => {
     return [...filteredProducts]
-      .sort((a, b) => b.sales - a.sales)
+      .sort((a, b) => b.stock - a.stock)
       .slice(0, 5);
-  }, [filteredProducts]);
+  });
 
   const formatValue = (value) => {
     if (value >= 1000000000) {
@@ -122,8 +122,8 @@ const ProductDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Top sản phẩm bán chạy</h3>
-            <TrendingUp className="text-green-500" />
+            <h3 className="text-lg font-semibold">Top sản phẩm tồn kho nhiều</h3>
+            <ArrowUpDown className="text-gray-500" />
           </div>
           <div className="space-y-4">
             {topSellingProducts.map((product, index) => (
@@ -132,7 +132,7 @@ const ProductDashboard = () => {
                   <span className="text-gray-600">#{index + 1}</span>
                   <span className="ml-2 font-medium">{product.name}</span>
                 </div>
-                <span className="text-blue-600 font-semibold">{product.sales} sản phẩm</span>
+                <span className="text-blue-600 font-semibold">{product.stock} sản phẩm</span>
               </div>
             ))}
           </div>
@@ -160,54 +160,106 @@ const ProductDashboard = () => {
       </div>
 
       {/* Biểu đồ thống kê */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">Top {CHART_ITEMS} sản phẩm theo {chartFilter === 'sales' ? 'doanh số' : 'doanh thu'}</h3>
-          <div className="flex gap-4">
-            <select 
-              className="border rounded-lg px-3 py-2"
-              value={chartFilter}
-              onChange={(e) => setChartFilter(e.target.value)}
-            >
-              <option value="sales">Doanh số</option>
-              <option value="revenue">Doanh thu</option>
-            </select>
-            <select 
-              className="border rounded-lg px-3 py-2"
-              value={chartTimeRange}
-              onChange={(e) => setChartTimeRange(e.target.value)}
-            >
-              <option value="week">Tuần này</option>
-              <option value="month">Tháng này</option>
-              <option value="year">Năm nay</option>
-              <option value="all">Tất cả</option>
-            </select>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">Biểu đồ {chartFilter === 'sales' ? 'doanh số' : 'doanh thu'}</h3>
+            <div className="flex gap-4">
+              <select 
+                className="border rounded-lg px-3 py-2"
+                value={chartFilter}
+                onChange={(e) => setChartFilter(e.target.value)}
+              >
+                <option value="sales">Doanh số</option>
+                <option value="revenue">Doanh thu</option>
+              </select>
+              <select 
+                className="border rounded-lg px-3 py-2"
+                value={chartTimeRange}
+                onChange={(e) => setChartTimeRange(e.target.value)}
+              >
+                <option value="week">Tuần này</option>
+                <option value="month">Tháng này</option>
+                <option value="year">Năm nay</option>
+                <option value="all">Tất cả</option>
+              </select>
+            </div>
           </div>
+          <ResponsiveContainer width="100%" height={400}>
+            <BarChart
+              data={chartData}
+              layout="vertical"
+              margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis 
+                type="category" 
+                dataKey="name"
+                width={100}
+              />
+              <Tooltip 
+                formatter={(value) => [formatValue(value), chartFilter === 'sales' ? 'Số lượng' : 'Doanh thu']}
+              />
+              <Legend />
+              <Bar 
+                dataKey={chartFilter}
+                fill={chartFilter === 'sales' ? "#82ca9d" : "#8884d8"}
+                name={chartFilter === 'sales' ? "Số lượng bán" : "Doanh thu"}
+              />
+            </BarChart>
+          </ResponsiveContainer>
         </div>
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart
-            data={chartData}
-            layout="vertical"
-            margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis 
-              type="category" 
-              dataKey="name"
-              width={100}
-            />
-            <Tooltip 
-              formatter={(value) => [formatValue(value), chartFilter === 'sales' ? 'Số lượng' : 'Doanh thu']}
-            />
-            <Legend />
-            <Bar 
-              dataKey={chartFilter}
-              fill={chartFilter === 'sales' ? "#82ca9d" : "#8884d8"}
-              name={chartFilter === 'sales' ? "Số lượng bán" : "Doanh thu"}
-            />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold">Biểu đồ tồn kho</h3>
+            <div className="flex gap-4">
+              <select 
+                className="border rounded-lg px-3 py-2"
+                value={chartTimeRange}
+                onChange={(e) => setChartTimeRange(e.target.value)}
+              >
+                <option value="week">Tuần này</option>
+                <option value="month">Tháng này</option>
+                <option value="year">Năm nay</option>
+                <option value="all">Tất cả</option>
+              </select>
+            </div>
+          </div>
+          <ResponsiveContainer width="100%" height={400}>
+            {filteredProducts.length > 0 ? (
+              <LineChart
+                data={filteredProducts.slice(0, 10)} // Hiển thị 10 sản phẩm tồn kho nhiều nhất
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis 
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={100}
+                />
+                <YAxis 
+                  type="number"
+                  domain={['dataMin', 'dataMax']}
+                />
+                <Tooltip 
+                  formatter={(value) => [formatValue(value), 'Tồn kho']}
+                />
+                <Legend />
+                <Line 
+                  dataKey="stock"
+                  stroke="#82ca9d"
+                  name="Tồn kho"
+                />
+              </LineChart>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <span className="text-gray-500">Không có dữ liệu để hiển thị</span>
+              </div>
+            )}
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Bảng sản phẩm */}
@@ -287,6 +339,7 @@ const ProductDashboard = () => {
             </tbody>
           </table>
         </div>
+
         
         {/* Phân trang */}
         <div className="p-4 flex items-center justify-between border-t">

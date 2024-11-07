@@ -12,14 +12,15 @@ const Sidebar = () => {
             <FiHome className="mr-2" /> Trang chủ
           </li>
         </Link>
+
+        <li className="flex items-center mb-4">
+          <FiShoppingBag className="mr-2" /> Đơn hàng
+        </li>
         <Link to="/product" className="flex items-center mb-4">
           <li className="flex items-center">
-            <FiShoppingBag className="mr-2" /> Đơn hàng
+            <FiShoppingBag className="mr-2" /> Sản phẩm
           </li>
         </Link>
-        <li className="flex items-center mb-4">
-          <FiShoppingBag className="mr-2" /> Sản phẩm
-        </li>
         <li className="flex items-center mb-4">
           <FiUsers className="mr-2" /> Khách hàng
         </li>
