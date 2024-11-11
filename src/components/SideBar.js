@@ -21,9 +21,11 @@ const Sidebar = () => {
             <FiShoppingBag className="mr-2" /> Sản phẩm
           </li>
         </Link>
-        <li className="flex items-center mb-4">
-          <FiUsers className="mr-2" /> Khách hàng
-        </li>
+        <Link to="/customers" className="flex items-center mb-4">
+          <li className="flex items-center">
+            <FiUsers className="mr-2" /> Khách hàng
+          </li>
+        </Link>
         <li className="flex items-center mb-4">
           <FiSettings className="mr-2" /> Cài đặt
         </li>
