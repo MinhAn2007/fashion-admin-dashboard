@@ -10,6 +10,7 @@ import Header from "./components/Header";
 import Dashboard from "./components/Dashboard";
 import Product from "./components/products/index";
 import CustomerDashboard from "./components/customers/CustomerDashboard";
+import OrderManagementDashboard from "./components/orders";
 
 function App() {
   return (
@@ -28,6 +29,8 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/product" element={<Product />} />
               <Route path="/customers" element={<CustomerDashboard />} />
+              <Route path="/order" element={<OrderManagementDashboard />} />
+
             </Routes>
           </div>
         </div>
