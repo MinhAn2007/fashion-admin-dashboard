@@ -1,3 +1,5 @@
+// CustomerDashboard.js
+
 import React, { useState, useEffect, useCallback } from 'react';
 import StatsCard from '../StatsCard';
 import {
@@ -23,10 +25,12 @@ const CustomerDashboard = () => {
     const fetchCustomers = useCallback(async () => {
         try {
             const response = await fetch(
-                `${API}/api/users?page=${currentPage}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(searchTerm)}&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`
+                `${API}/api/users?page=${currentPage}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(
+                    searchTerm
+                )}&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`
             );
             const data = await response.json();
-            if (response.ok && data.users) {
+            if (response.ok && data.success) {
                 setCustomers(data.users);
             } else {
                 console.error('Error fetching customers:', data.message);
@@ -41,7 +45,7 @@ const CustomerDashboard = () => {
         try {
             const response = await fetch(`${API}/api/users/stats`);
             const data = await response.json();
-            if (response.ok && data) {
+            if (response.ok && data.success) {
                 setCustomerStats({
                     totalUsers: data.totalUsers,
                     newUsersThisMonth: data.newUsersThisMonth,
@@ -61,6 +65,11 @@ const CustomerDashboard = () => {
         fetchCustomerStats();
     }, [fetchCustomers, fetchCustomerStats]);
 
+    // Gọi lại fetchCustomers khi thay đổi sortConfig hoặc currentPage
+    useEffect(() => {
+        fetchCustomers();
+    }, [fetchCustomers]);
+
     // Xử lý sắp xếp
     const handleSort = (key) => {
         let direction = 'asc';
@@ -72,6 +81,15 @@ const CustomerDashboard = () => {
 
     // Tính tổng số trang
     const totalPages = Math.ceil((customerStats.totalUsers || 0) / ITEMS_PER_PAGE);
+
+    // Kiểm tra và in ra dữ liệu để debug
+    useEffect(() => {
+        console.log('Customer Stats:', customerStats);
+    }, [customerStats]);
+
+    useEffect(() => {
+        console.log('Customers:', customers);
+    }, [customers]);
 
     return (
         <div className="p-6 flex flex-col space-y-6 bg-gray-50 min-h-screen">
@@ -104,7 +122,12 @@ const CustomerDashboard = () => {
                         <YAxis allowDecimals={false} />
                         <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="newUsers" stroke="#8884d8" name="Khách hàng mới" />
+                        <Line
+                            type="monotone"
+                            dataKey="newUsers"
+                            stroke="#8884d8"
+                            name="Khách hàng mới"
+                        />
                     </LineChart>
                 </ResponsiveContainer>
             </div>
@@ -134,19 +157,28 @@ const CustomerDashboard = () => {
                         <thead>
                             <tr className="border-b bg-gray-50">
                                 <th className="p-4 text-left">
-                                    <button onClick={() => handleSort('first_name')} className="flex items-center font-bold hover:text-blue-600">
+                                    <button
+                                        onClick={() => handleSort('first_name')}
+                                        className="flex items-center font-bold hover:text-blue-600"
+                                    >
                                         Tên
                                         <ArrowUpDown className="ml-2 h-4 w-4" />
                                     </button>
                                 </th>
                                 <th className="p-4 text-left">
-                                    <button onClick={() => handleSort('email')} className="flex items-center font-bold hover:text-blue-600">
+                                    <button
+                                        onClick={() => handleSort('email')}
+                                        className="flex items-center font-bold hover:text-blue-600"
+                                    >
                                         Email
                                         <ArrowUpDown className="ml-2 h-4 w-4" />
                                     </button>
                                 </th>
                                 <th className="p-4 text-left">
-                                    <button onClick={() => handleSort('created_at')} className="flex items-center font-bold hover:text-blue-600">
+                                    <button
+                                        onClick={() => handleSort('created_at')}
+                                        className="flex items-center font-bold hover:text-blue-600"
+                                    >
                                         Ngày đăng ký
                                         <ArrowUpDown className="ml-2 h-4 w-4" />
                                     </button>
@@ -159,12 +191,16 @@ const CustomerDashboard = () => {
                                     <tr key={customer.id} className="border-b hover:bg-gray-50">
                                         <td className="p-4">{`${customer.first_name} ${customer.last_name}`}</td>
                                         <td className="p-4">{customer.email}</td>
-                                        <td className="p-4">{new Date(customer.created_at).toLocaleDateString()}</td>
+                                        <td className="p-4">
+                                            {new Date(customer.created_at).toLocaleDateString()}
+                                        </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td className="p-4" colSpan="3">Không có khách hàng nào</td>
+                                    <td className="p-4" colSpan="3">
+                                        Không có khách hàng nào
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
@@ -174,22 +210,24 @@ const CustomerDashboard = () => {
                 {/* Phân trang */}
                 <div className="p-4 flex items-center justify-between border-t">
                     <div className="text-sm text-gray-500">
-                        Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến {Math.min(currentPage * ITEMS_PER_PAGE, customerStats.totalUsers || 0)} trong số {customerStats.totalUsers || 0} khách hàng
+                        Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến{' '}
+                        {Math.min(currentPage * ITEMS_PER_PAGE, customerStats.totalUsers || 0)} trong
+                        số {customerStats.totalUsers || 0} khách hàng
                     </div>
                     <div className="flex items-center gap-2">
                         <button
                             className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                            onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                             disabled={currentPage === 1}
                         >
                             <ChevronLeft className="h-5 w-5" />
                         </button>
                         <span className="px-4 py-2 rounded-lg bg-gray-100">
-                            {currentPage} / {totalPages}
+                            {currentPage} / {totalPages || 1}
                         </span>
                         <button
                             className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                            onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                             disabled={currentPage === totalPages}
                         >
                             <ChevronRight className="h-5 w-5" />
