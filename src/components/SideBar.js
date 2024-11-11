@@ -1,5 +1,5 @@
 import React from "react";
-import { FiHome, FiShoppingBag, FiUsers, FiSettings } from "react-icons/fi";
+import { FiHome, FiShoppingBag, FiUsers, FiSettings, FiBox } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 const Sidebar = () => {
@@ -14,7 +14,7 @@ const Sidebar = () => {
         </Link>
 
         <li className="flex items-center mb-4">
-          <FiShoppingBag className="mr-2" /> Đơn hàng
+          <FiBox className="mr-2" /> Đơn hàng
         </li>
         <Link to="/product" className="flex items-center mb-4">
           <li className="flex items-center">
