@@ -1,68 +1,67 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import StatsCard from '../StatsCard';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { Search, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
+const ITEMS_PER_PAGE = 10;
+
 const CustomerDashboard = () => {
     const [customers, setCustomers] = useState([]);
-    const [customerStats, setCustomerStats] = useState({});
+    const [customerStats, setCustomerStats] = useState({
+        totalUsers: 0,
+        newUsersThisMonth: 0,
+        monthlyNewUsers: [],
+    });
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortConfig, setSortConfig] = useState({ key: 'createdAt', direction: 'desc' });
+    const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' });
     const [currentPage, setCurrentPage] = useState(1);
-    const [totalPages, setTotalPages] = useState(1);
-    const ITEMS_PER_PAGE = 10;
     const API = process.env.REACT_APP_API_ENDPOINT;
 
-    useEffect(() => {
-        fetchCustomers();
-    }, [currentPage, sortConfig, searchTerm]);
-
-    useEffect(() => {
-        fetchCustomerStats();
-    }, []);
-
-    const fetchCustomers = async () => {
+    // Hàm gọi API để lấy danh sách khách hàng
+    const fetchCustomers = useCallback(async () => {
         try {
             const response = await fetch(
-                `${API}/api/users?page=${currentPage}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(searchTerm)}&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                    },
-                }
+                `${API}/api/users?page=${currentPage}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(searchTerm)}&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`
             );
             const data = await response.json();
-            if (data.success) {
-                setCustomers(data.data);
-                setTotalPages(data.totalPages);
+            if (response.ok && data.users) {
+                setCustomers(data.users);
             } else {
                 console.error('Error fetching customers:', data.message);
             }
         } catch (error) {
             console.error('Error fetching customers:', error);
         }
-    };
+    }, [API, currentPage, searchTerm, sortConfig.key, sortConfig.direction]);
 
-    const fetchCustomerStats = async () => {
+    // Hàm gọi API để lấy thống kê khách hàng
+    const fetchCustomerStats = useCallback(async () => {
         try {
-            const response = await fetch(`${API}/api/users/stats`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
-                },
-            });
+            const response = await fetch(`${API}/api/users/stats`);
             const data = await response.json();
-            if (data.success) {
-                setCustomerStats(data.data);
+            if (response.ok && data) {
+                setCustomerStats({
+                    totalUsers: data.totalUsers,
+                    newUsersThisMonth: data.newUsersThisMonth,
+                    monthlyNewUsers: data.monthlyNewUsers,
+                });
             } else {
                 console.error('Error fetching customer stats:', data.message);
             }
         } catch (error) {
             console.error('Error fetching customer stats:', error);
         }
-    };
+    }, [API]);
 
+    // Gọi fetchCustomers và fetchCustomerStats khi component mount
+    useEffect(() => {
+        fetchCustomers();
+        fetchCustomerStats();
+    }, [fetchCustomers, fetchCustomerStats]);
+
+    // Xử lý sắp xếp
     const handleSort = (key) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -71,18 +70,8 @@ const CustomerDashboard = () => {
         setSortConfig({ key, direction });
     };
 
-    const formatValue = (value) => {
-        if (value >= 1000000000) {
-            return `${(value / 1000000000).toFixed(1)}B`;
-        }
-        if (value >= 1000000) {
-            return `${(value / 1000000).toFixed(1)}M`;
-        }
-        if (value >= 1000) {
-            return `${(value / 1000).toFixed(1)}K`;
-        }
-        return value.toString();
-    };
+    // Tính tổng số trang
+    const totalPages = Math.ceil((customerStats.totalUsers || 0) / ITEMS_PER_PAGE);
 
     return (
         <div className="p-6 flex flex-col space-y-6 bg-gray-50 min-h-screen">
@@ -145,7 +134,7 @@ const CustomerDashboard = () => {
                         <thead>
                             <tr className="border-b bg-gray-50">
                                 <th className="p-4 text-left">
-                                    <button onClick={() => handleSort('firstName')} className="flex items-center font-bold hover:text-blue-600">
+                                    <button onClick={() => handleSort('first_name')} className="flex items-center font-bold hover:text-blue-600">
                                         Tên
                                         <ArrowUpDown className="ml-2 h-4 w-4" />
                                     </button>
@@ -157,7 +146,7 @@ const CustomerDashboard = () => {
                                     </button>
                                 </th>
                                 <th className="p-4 text-left">
-                                    <button onClick={() => handleSort('createdAt')} className="flex items-center font-bold hover:text-blue-600">
+                                    <button onClick={() => handleSort('created_at')} className="flex items-center font-bold hover:text-blue-600">
                                         Ngày đăng ký
                                         <ArrowUpDown className="ml-2 h-4 w-4" />
                                     </button>
@@ -168,9 +157,9 @@ const CustomerDashboard = () => {
                             {customers.length > 0 ? (
                                 customers.map((customer) => (
                                     <tr key={customer.id} className="border-b hover:bg-gray-50">
-                                        <td className="p-4">{`${customer.firstName} ${customer.lastName}`}</td>
+                                        <td className="p-4">{`${customer.first_name} ${customer.last_name}`}</td>
                                         <td className="p-4">{customer.email}</td>
-                                        <td className="p-4">{new Date(customer.createdAt).toLocaleDateString()}</td>
+                                        <td className="p-4">{new Date(customer.created_at).toLocaleDateString()}</td>
                                     </tr>
                                 ))
                             ) : (
