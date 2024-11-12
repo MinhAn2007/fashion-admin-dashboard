@@ -24,6 +24,7 @@ const CustomerDashboard = () => {
     // Hàm gọi API để lấy danh sách khách hàng
     const fetchCustomers = useCallback(async () => {
         try {
+            setCustomers([]); // Đặt lại dữ liệu trước khi tải mới
             const response = await fetch(
                 `${API}/api/users?page=${currentPage}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(
                     searchTerm
@@ -32,6 +33,10 @@ const CustomerDashboard = () => {
             const data = await response.json();
             if (response.ok && data.success) {
                 setCustomers(data.users);
+                setCustomerStats((prevStats) => ({
+                    ...prevStats,
+                    totalUsers: data.total, // Cập nhật tổng số khách hàng từ API
+                }));
             } else {
                 console.error('Error fetching customers:', data.message);
             }
@@ -81,15 +86,6 @@ const CustomerDashboard = () => {
 
     // Tính tổng số trang
     const totalPages = Math.ceil((customerStats.totalUsers || 0) / ITEMS_PER_PAGE);
-
-    // Kiểm tra và in ra dữ liệu để debug
-    useEffect(() => {
-        console.log('Customer Stats:', customerStats);
-    }, [customerStats]);
-
-    useEffect(() => {
-        console.log('Customers:', customers);
-    }, [customers]);
 
     return (
         <div className="p-6 flex flex-col space-y-6 bg-gray-50 min-h-screen">
