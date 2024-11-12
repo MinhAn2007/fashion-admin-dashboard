@@ -7,6 +7,7 @@ import {
   FiBox,
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
+import { TbCategoryPlus } from "react-icons/tb";
 
 const Sidebar = () => {
   return (
@@ -27,7 +28,7 @@ const Sidebar = () => {
         </Link>
         <Link to="/category" className="flex items-center">
           <li className="flex items-center mb-4">
-            <FiBox className="mr-2" /> Danh mục
+            <TbCategoryPlus className="mr-2" /> Danh mục
           </li>
         </Link>
         <Link to="/product" className="flex items-center mb-4">

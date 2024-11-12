@@ -151,7 +151,7 @@ const CategoryManagementDashboard = () => {
   const categoryDistributionData = useMemo(() => {
     const distribution = {};
     filteredCategories.forEach((category) => {
-      const type = category.name.split(" ")[0]; // Get the category type
+        const type = category.name.split(/\d+/)[0].trim();      
       if (distribution[type]) {
         distribution[type] += category.totalProducts;
       } else {
@@ -234,11 +234,11 @@ const CategoryManagementDashboard = () => {
                 data={categoryDistributionData}
                 cx="50%"
                 cy="50%"
-                labelLine={true}
+                labelLine={false} // Ẩn đường kẻ nối nhãn với phần biểu đồ
                 label={({ name, percent }) =>
                   `${name}: ${(percent * 100).toFixed(0)}%`
                 }
-                outerRadius={120}
+                outerRadius={140} // Tăng kích thước outerRadius để nhãn dễ hiển thị
                 fill="#8884d8"
                 dataKey="value"
               >
