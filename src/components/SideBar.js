@@ -23,7 +23,11 @@ const Sidebar = () => {
             <FiBox className="mr-2" /> Đơn hàng
           </li>
         </Link>
-
+        <Link to="/category" className="flex items-center">
+          <li className="flex items-center mb-4">
+            <FiBox className="mr-2" /> Danh mục
+          </li>
+        </Link>
         <Link to="/product" className="flex items-center mb-4">
           <li className="flex items-center">
             <FiShoppingBag className="mr-2" /> Sản phẩm

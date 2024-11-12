@@ -11,6 +11,7 @@ import Dashboard from "./components/Dashboard";
 import Product from "./components/products/index";
 import CustomerDashboard from "./components/customers/CustomerDashboard";
 import OrderManagementDashboard from "./components/orders";
+import CategoryManagementDashboard from "./components/category";
 
 function App() {
   return (
@@ -30,7 +31,7 @@ function App() {
               <Route path="/product" element={<Product />} />
               <Route path="/customers" element={<CustomerDashboard />} />
               <Route path="/order" element={<OrderManagementDashboard />} />
-
+              <Route path="/category" element={<CategoryManagementDashboard />} />
             </Routes>
           </div>
         </div>
