@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import StatsCard from "./StatsCard";
 import Chart from "./Chart";
 import { formatPrice } from "../utils/FormatPrice";
+import { Link } from "react-router-dom"
 
 const Dashboard = () => {
   const [timePeriod, setTimePeriod] = useState("Today");
@@ -16,7 +17,7 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const response = await fetch(`${API}/api/orders/dashboard/total`);
-      const data = await response.json();  
+      const data = await response.json();
       console.log(data);
 
       setDashboardData(data.data);
@@ -79,9 +80,14 @@ const Dashboard = () => {
 
       <div className="flex space-x-12">
         <div className="w-1/2 bg-white p-4 rounded-lg shadow-md">
-          <h6 className="text-lg font-semibold mb-4">
-            Danh sách đơn hàng cần xử lý
-          </h6>
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold mb-4">Đơn hàng chờ xử lý</h3>
+            <button className="text-sm text-blue-500">
+              <Link to="/order" className="flex items-center">
+                Xem tất cả
+              </Link>
+            </button>
+          </div>
           <table className="min-w-full table-auto">
             <thead>
               <tr className="bg-gray-100">
