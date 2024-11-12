@@ -7,7 +7,7 @@ import {
   FiBox,
 } from "react-icons/fi";
 import { Link } from "react-router-dom";
-import { TbCategoryPlus } from "react-icons/tb";
+import { TbCategoryPlus, TbMessage } from "react-icons/tb";
 
 const Sidebar = () => {
   return (
@@ -41,6 +41,10 @@ const Sidebar = () => {
             <FiUsers className="mr-2" /> Khách hàng
           </li>
         </Link>
+        <li className="flex items-center mb-4">
+          <TbMessage className="mr-2" /> Ý kiến khách hàng
+        </li>
+
         <li className="flex items-center mb-4">
           <FiSettings className="mr-2" /> Cài đặt
         </li>
