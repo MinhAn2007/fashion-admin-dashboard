@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Search, Plus, Edit2, Trash2, ArrowUpDown, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 
@@ -9,37 +9,81 @@ const ProductDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
   const [currentPage, setCurrentPage] = useState(1);
-  const [chartFilter, setChartFilter] = useState('sales'); // 'sales' hoặc 'revenue'
-  const [chartTimeRange, setChartTimeRange] = useState('all'); // 'week', 'month', 'year', 'all'
+  const [chartFilter, setChartFilter] = useState('sales');
+  const [chartTimeRange, setChartTimeRange] = useState('all');
 
-  // Mock data generator để test với nhiều dữ liệu
-  const generateMockData = () => {
-    const products = [];
-    for (let i = 1; i <= 100; i++) {
-      products.push({
-        id: i,
-        name: `Sản phẩm ${i}`,
-        price: Math.floor(Math.random() * 20000000) + 1000000,
-        stock: Math.floor(Math.random() * 200),
-        sales: Math.floor(Math.random() * 500),
-        revenue: 0, // Sẽ được tính toán
-      });
-    }
-    // Tính revenue
-    return products.map(product => ({
-      ...product,
-      revenue: product.price * product.sales
-    }));
-  };
+  // State for API data
+  const [inventoryStats, setInventoryStats] = useState([]);
+  const [productStats, setProductStats] = useState([]);
+  const [revenueStats, setRevenueStats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const sampleData = {
-    products: generateMockData()
-  };
+  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
-  // Xử lý sắp xếp
-  const sortProducts = (products) => {
-    if (!sortConfig.key) return products;
-    return [...products].sort((a, b) => {
+  // Fetch data from APIs
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [inventoryRes, productRes, revenueRes] = await Promise.all([
+          fetch(`${API_ENDPOINT}/api/inventoryStats`),
+          fetch(`${API_ENDPOINT}/api/productStats`),
+          fetch(`${API_ENDPOINT}/api/productRevenueStats`)
+        ]);
+
+        if (!inventoryRes.ok || !productRes.ok || !revenueRes.ok) {
+          throw new Error('Failed to fetch data');
+        }
+
+        const inventoryData = await inventoryRes.json();
+        console.log(inventoryData);
+        
+        const productData = await productRes.json();
+
+        console.log(productData);
+        
+        const revenueData = await revenueRes.json();
+
+        console.log(revenueData);
+        
+
+        setInventoryStats(inventoryData);
+        setProductStats(productData);
+        setRevenueStats(revenueData);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Combine data for products table
+  const products = useMemo(() => {
+    if (!inventoryStats.length || !productStats.length || !revenueStats.length) return [];
+    
+    return inventoryStats.map(inventory => {
+      const productStat = productStats.find(p => p.id === inventory.id) || {};
+      const revenueStat = revenueStats.find(r => r.id === inventory.id) || {};
+      
+      return {
+        id: inventory.id,
+        name: inventory.name,
+        price: inventory.price,
+        stock: inventory.stock,
+        sales: productStat.sales || 0,
+        revenue: revenueStat.revenue || 0
+      };
+    });
+  }, [inventoryStats, productStats, revenueStats]);
+
+  // Sort products
+  const sortProducts = (items) => {
+    if (!sortConfig.key) return items;
+    return [...items].sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
         return sortConfig.direction === 'asc' ? -1 : 1;
       }
@@ -55,21 +99,21 @@ const ProductDashboard = () => {
     setSortConfig({ key, direction });
   };
 
-  // Lọc và sắp xếp sản phẩm
+  // Filter and sort products
   const filteredProducts = useMemo(() => {
-    return sortProducts(sampleData.products.filter(product =>
+    return sortProducts(products.filter(product =>
       product.name.toLowerCase().includes(searchTerm.toLowerCase())
     ));
-  }, [searchTerm, sortConfig]);
+  }, [products, searchTerm, sortConfig]);
 
-  // Phân trang
+  // Pagination
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Dữ liệu cho biểu đồ
+  // Chart data
   const chartData = useMemo(() => {
     const sortedProducts = [...filteredProducts].sort((a, b) => {
       if (chartFilter === 'sales') {
@@ -81,7 +125,7 @@ const ProductDashboard = () => {
     return sortedProducts.slice(0, CHART_ITEMS).reverse();
   }, [filteredProducts, chartFilter]);
 
-  // Top sản phẩm
+  // Top products
   const topProducts = useMemo(() => {
     return [...filteredProducts]
       .sort((a, b) => b.revenue - a.revenue)
@@ -92,7 +136,7 @@ const ProductDashboard = () => {
     return [...filteredProducts]
       .sort((a, b) => b.stock - a.stock)
       .slice(0, 5);
-  });
+  }, [filteredProducts]);
 
   const formatValue = (value) => {
     if (value >= 1000000000) {
@@ -107,6 +151,22 @@ const ProductDashboard = () => {
     return value.toString();
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-xl text-red-600">Error: {error}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -118,7 +178,7 @@ const ProductDashboard = () => {
         </button>
       </div>
 
-      {/* Thống kê */}
+      {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
@@ -159,7 +219,7 @@ const ProductDashboard = () => {
         </div>
       </div>
 
-      {/* Biểu đồ thống kê */}
+      {/* Charts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
@@ -210,6 +270,7 @@ const ProductDashboard = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
+
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold">Biểu đồ tồn kho</h3>
@@ -229,7 +290,7 @@ const ProductDashboard = () => {
           <ResponsiveContainer width="100%" height={400}>
             {filteredProducts.length > 0 ? (
               <LineChart
-                data={filteredProducts.slice(0, 10)} // Hiển thị 10 sản phẩm tồn kho nhiều nhất
+                data={filteredProducts.slice(0, 10)}
                 margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
               >
                 <CartesianGrid strokeDasharray="3 3" />
@@ -248,6 +309,7 @@ const ProductDashboard = () => {
                 />
                 <Legend />
                 <Line 
+                  type="monotone"
                   dataKey="stock"
                   stroke="#82ca9d"
                   name="Tồn kho"
@@ -262,7 +324,7 @@ const ProductDashboard = () => {
         </div>
       </div>
 
-      {/* Bảng sản phẩm */}
+      {/* Products Table */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="p-6 border-b">
           <div className="flex items-center justify-between mb-4">
@@ -279,6 +341,7 @@ const ProductDashboard = () => {
             </div>
           </div>
         </div>
+
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
