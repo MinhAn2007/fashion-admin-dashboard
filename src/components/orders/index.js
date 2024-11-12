@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { BarChart, Bar, PieChart, Pie } from "recharts";
 import { formatPrice } from "../../utils/FormatPrice";
+import { ArrowUpDown } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -230,8 +231,8 @@ const OrderManagementDashboard = () => {
         </ResponsiveContainer>
       </div>
       <div className="flex justify-between gap-6">
-      <div className="bg-white rounded-lg shadow-sm p-6 flex-1">
-      <h3 className="text-lg font-semibold mb-4">Phương thức thanh toán</h3>
+        <div className="bg-white rounded-lg shadow-sm p-6 flex-1">
+          <h3 className="text-lg font-semibold mb-4">Phương thức thanh toán</h3>
           <ResponsiveContainer width="100%" height={400}>
             <PieChart>
               <Pie
@@ -304,10 +305,42 @@ const OrderManagementDashboard = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="p-4 text-left">Khách hàng</th>
-                  <th className="p-4 text-left">Trạng thái</th>
-                  <th className="p-4 text-left">Tổng tiền</th>
-                  <th className="p-4 text-left">Ngày tạo</th>
+                  <th className="p-4 text-left">
+                    <button
+                      onClick={() => handleSort("customer")}
+                      className="flex items-center font-bold hover:text-blue-600"
+                    >
+                      Khách hàng
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </button>
+                  </th>
+                  <th className="p-4 text-left">
+                    <button
+                      onClick={() => handleSort("status")}
+                      className="flex items-center font-bold hover:text-blue-600"
+                    >
+                      Trạng thái
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </button>
+                  </th>
+                  <th className="p-4 text-left">
+                    <button
+                      onClick={() => handleSort("total")}
+                      className="flex items-center font-bold hover:text-blue-600"
+                    >
+                      Tổng tiền
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </button>
+                  </th>
+                  <th className="p-4 text-left">
+                    <button
+                      onClick={() => handleSort("createdAt")}
+                      className="flex items-center font-bold hover:text-blue-600"
+                    >
+                      Ngày tạo
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </button>
+                  </th>
                   <th className="p-4 text-left">Thao tác</th>
                 </tr>
               </thead>
