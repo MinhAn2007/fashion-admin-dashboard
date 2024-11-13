@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import {
-    PieChart,
-    Pie,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-} from 'recharts';
+import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+
+const COLORS = {
+    positive: '#0088FE', // Xanh dương
+    negative: '#FF8042', // Màu gạch
+    total: '#32CD32',    // Xanh lá cây
+};
+const API = process.env.REACT_APP_API_ENDPOINT;
 
 const ReviewDashboard = () => {
     const [reviewStats, setReviewStats] = useState({
@@ -18,7 +14,7 @@ const ReviewDashboard = () => {
         positiveReviews: 0,
         negativeReviews: 0,
     });
-    const API = process.env.REACT_APP_API_ENDPOINT;
+    const [monthlyReviews, setMonthlyReviews] = useState([]);
 
     useEffect(() => {
         const fetchReviewStats = async () => {
@@ -31,6 +27,7 @@ const ReviewDashboard = () => {
                         positiveReviews: data.positiveReviews,
                         negativeReviews: data.negativeReviews,
                     });
+                    setMonthlyReviews(data.monthlyReviews || []);
                 }
             } catch (error) {
                 console.error('Error fetching review statistics:', error);
@@ -40,31 +37,60 @@ const ReviewDashboard = () => {
         fetchReviewStats();
     }, []);
 
-    // Data cho Pie Chart
     const pieData = [
-        { name: 'Tích cực', value: reviewStats.positiveReviews },
-        { name: 'Tiêu cực', value: reviewStats.negativeReviews },
+        { name: 'Tích cực', value: reviewStats.positiveReviews, color: COLORS.positive },
+        { name: 'Tiêu cực', value: reviewStats.negativeReviews, color: COLORS.negative },
     ];
 
-    // Data cho Bar Chart
     const barData = [
-        { name: 'Tổng số', value: reviewStats.totalReviews },
-        { name: 'Tích cực', value: reviewStats.positiveReviews },
-        { name: 'Tiêu cực', value: reviewStats.negativeReviews },
+        { name: 'Tổng số', value: reviewStats.totalReviews, color: COLORS.total },
+        { name: 'Tích cực', value: reviewStats.positiveReviews, color: COLORS.positive },
+        { name: 'Tiêu cực', value: reviewStats.negativeReviews, color: COLORS.negative },
     ];
+
+    const CustomTooltip = ({ active, payload }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-white p-4 shadow-lg rounded-lg border">
+                    <p className="font-semibold">{payload[0].name}</p>
+                    <p>{`Số lượng: ${payload[0].value.toLocaleString()}`}</p>
+                </div>
+            );
+        }
+        return null;
+    };
 
     return (
-        <div className="p-6">
+        <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
             <h1 className="text-2xl font-bold mb-6">Thống kê Đánh Giá Khách Hàng</h1>
 
             {/* Biểu đồ Pie cho tỷ lệ tích cực / tiêu cực */}
-
-
-
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 className="text-lg font-semibold mb-4">Tỷ lệ đánh giá tích cực và tiêu cực</h2>
+                <ResponsiveContainer width="100%" height={400}>
+                    <PieChart>
+                        <Pie
+                            data={pieData}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            outerRadius={140}
+                            dataKey="value"
+                        >
+                            {pieData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend />
+                    </PieChart>
+                </ResponsiveContainer>
+            </div>
 
             {/* Biểu đồ Bar cho tổng số lượng đánh giá */}
-            <div className="mb-6">
-                <h2 className="text-xl font-semibold">Phân bổ số lượng đánh giá</h2>
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 className="text-lg font-semibold mb-4">Phân bổ số lượng đánh giá</h2>
                 <ResponsiveContainer width="100%" height={400}>
                     <BarChart data={barData}>
                         <CartesianGrid strokeDasharray="3 3" />
@@ -72,10 +98,17 @@ const ReviewDashboard = () => {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Bar dataKey="value" fill="#82ca9d" />
+                        <Bar dataKey="value">
+                            {barData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                            ))}
+                        </Bar>
                     </BarChart>
                 </ResponsiveContainer>
             </div>
+
+            {/* Biểu đồ lịch sử đánh giá theo tháng */}
+
         </div>
     );
 };
