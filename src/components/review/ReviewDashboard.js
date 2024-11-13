@@ -28,6 +28,8 @@ const ReviewDashboard = () => {
                         negativeReviews: data.negativeReviews,
                     });
                     setMonthlyReviews(data.monthlyReviews || []);
+                } else {
+                    console.error('Error fetching review statistics: Data success false');
                 }
             } catch (error) {
                 console.error('Error fetching review statistics:', error);
@@ -108,7 +110,20 @@ const ReviewDashboard = () => {
             </div>
 
             {/* Biểu đồ lịch sử đánh giá theo tháng */}
-
+            <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold mb-4">Lịch sử đánh giá theo tháng</h2>
+                <ResponsiveContainer width="100%" height={400}>
+                    <LineChart data={monthlyReviews}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="positive" stroke={COLORS.positive} name="Tích cực" />
+                        <Line type="monotone" dataKey="negative" stroke={COLORS.negative} name="Tiêu cực" />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 };
