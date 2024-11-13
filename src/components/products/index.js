@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { Search, Plus, Edit2, Trash2, ArrowUpDown, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 
+import { formatPrice } from '../../utils/FormatPrice'
+
 const ITEMS_PER_PAGE = 10;
 const CHART_ITEMS = 10;
 
@@ -13,9 +15,9 @@ const ProductDashboard = () => {
   const [chartTimeRange, setChartTimeRange] = useState('all');
 
   // State for API data
-  const [inventoryStats, setInventoryStats] = useState([]);
-  const [productStats, setProductStats] = useState([]);
-  const [revenueStats, setRevenueStats] = useState([]);
+  const [inventoryStats, setInventoryStats] = useState({});
+  const [productStats, setProductStats] = useState({});
+  const [revenueStats, setRevenueStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -37,15 +39,15 @@ const ProductDashboard = () => {
         }
 
         const inventoryData = await inventoryRes.json();
-        console.log(inventoryData);
+        console.log("inventoryData", inventoryData);
         
         const productData = await productRes.json();
 
-        console.log(productData);
+        console.log("productData", productData);
         
         const revenueData = await revenueRes.json();
 
-        console.log(revenueData);
+        console.log("revenueData", revenueData);
         
 
         setInventoryStats(inventoryData);
@@ -132,25 +134,6 @@ const ProductDashboard = () => {
       .slice(0, 5);
   }, [filteredProducts]);
 
-  const topSellingProducts = useMemo(() => {
-    return [...filteredProducts]
-      .sort((a, b) => b.stock - a.stock)
-      .slice(0, 5);
-  }, [filteredProducts]);
-
-  const formatValue = (value) => {
-    if (value >= 1000000000) {
-      return `${(value / 1000000000).toFixed(1)}B`;
-    }
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    }
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
-    }
-    return value.toString();
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -186,13 +169,13 @@ const ProductDashboard = () => {
             <ArrowUpDown className="text-gray-500" />
           </div>
           <div className="space-y-4">
-            {topSellingProducts.map((product, index) => (
+            {inventoryStats.inventoryStats.map((product, index) => (
               <div key={product.id} className="flex justify-between items-center">
                 <div>
                   <span className="text-gray-600">#{index + 1}</span>
                   <span className="ml-2 font-medium">{product.name}</span>
                 </div>
-                <span className="text-blue-600 font-semibold">{product.stock} sản phẩm</span>
+                <span className="text-blue-600 font-semibold">{product.total_stock} sản phẩm</span>
               </div>
             ))}
           </div>
@@ -204,14 +187,14 @@ const ProductDashboard = () => {
             <DollarSign className="text-yellow-500" />
           </div>
           <div className="space-y-4">
-            {topProducts.map((product, index) => (
+            {productStats.topProducts.map((product, index) => (
               <div key={product.id} className="flex justify-between items-center">
                 <div>
                   <span className="text-gray-600">#{index + 1}</span>
                   <span className="ml-2 font-medium">{product.name}</span>
                 </div>
                 <span className="text-green-600 font-semibold">
-                  {formatValue(product.revenue)}
+                  {formatPrice(product.revenue)}
                 </span>
               </div>
             ))}
@@ -259,7 +242,7 @@ const ProductDashboard = () => {
                 width={100}
               />
               <Tooltip 
-                formatter={(value) => [formatValue(value), chartFilter === 'sales' ? 'Số lượng' : 'Doanh thu']}
+                formatter={(value) => [formatPrice(value), chartFilter === 'sales' ? 'Số lượng' : 'Doanh thu']}
               />
               <Legend />
               <Bar 
@@ -305,7 +288,7 @@ const ProductDashboard = () => {
                   domain={['dataMin', 'dataMax']}
                 />
                 <Tooltip 
-                  formatter={(value) => [formatValue(value), 'Tồn kho']}
+                  formatter={(value) => [formatPrice(value), 'Tồn kho']}
                 />
                 <Legend />
                 <Line 
