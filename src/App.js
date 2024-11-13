@@ -12,6 +12,7 @@ import Product from "./components/products/index";
 import CustomerDashboard from "./components/customers/CustomerDashboard";
 import OrderManagementDashboard from "./components/orders";
 import CategoryManagementDashboard from "./components/category";
+import ReviewDashboard from "./components/review/ReviewDashboard";
 
 function App() {
   return (
@@ -32,6 +33,7 @@ function App() {
               <Route path="/customers" element={<CustomerDashboard />} />
               <Route path="/order" element={<OrderManagementDashboard />} />
               <Route path="/category" element={<CategoryManagementDashboard />} />
+              <Route path="/reviews" element={<ReviewDashboard />} />
             </Routes>
           </div>
         </div>

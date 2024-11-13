@@ -41,10 +41,11 @@ const Sidebar = () => {
             <FiUsers className="mr-2" /> Khách hàng
           </li>
         </Link>
-        <li className="flex items-center mb-4">
-          <TbMessage className="mr-2" /> Ý kiến khách hàng
-        </li>
-
+        <Link to="/reviews" className="flex items-center mb-4">
+          <li className="flex items-center">
+            <TbMessage className="mr-2" /> Ý kiến khách hàng
+          </li>
+        </Link>
         <li className="flex items-center mb-4">
           <FiSettings className="mr-2" /> Cài đặt
         </li>
