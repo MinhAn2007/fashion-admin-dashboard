@@ -19,17 +19,24 @@ const ReviewDashboard = () => {
     useEffect(() => {
         const fetchReviewStats = async () => {
             try {
-                const response = await fetch(`${API}/api/reviews/statistics`);
-                const data = await response.json();
-                if (data.success) {
+                const [reviewStatsRes, monthlyReviewsRes] = await Promise.all([
+                    fetch(`${API}/api/reviews/statistics`),
+                    fetch(`${API}/api/reviews/monthly-statistics`)
+                ]);
+
+                const reviewStatsData = await reviewStatsRes.json();
+                const monthlyReviewsData = await monthlyReviewsRes.json();
+
+                if (reviewStatsData.success) {
                     setReviewStats({
-                        totalReviews: data.totalReviews,
-                        positiveReviews: data.positiveReviews,
-                        negativeReviews: data.negativeReviews,
+                        totalReviews: reviewStatsData.totalReviews,
+                        positiveReviews: reviewStatsData.positiveReviews,
+                        negativeReviews: reviewStatsData.negativeReviews,
                     });
-                    setMonthlyReviews(data.monthlyReviews || []);
-                } else {
-                    console.error('Error fetching review statistics: Data success false');
+                }
+
+                if (monthlyReviewsData.success) {
+                    setMonthlyReviews(monthlyReviewsData.monthlyReviews);
                 }
             } catch (error) {
                 console.error('Error fetching review statistics:', error);
