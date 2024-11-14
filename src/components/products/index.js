@@ -1,6 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Search, Plus, Edit2, Trash2, ArrowUpDown, TrendingUp, DollarSign, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+} from "recharts";
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  ArrowUpDown,
+  TrendingUp,
+  DollarSign,
+  ChevronLeft,
+  ChevronRight,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 import { formatPrice } from "../../utils/FormatPrice";
 
@@ -13,7 +36,6 @@ const ProductDashboard = () => {
   const [chartFilter, setChartFilter] = useState("sales");
   const [chartTimeRange, setChartTimeRange] = useState("all");
 
-  const [inventoryStats, setInventoryStats] = useState({});
   const [productStats, setProductStats] = useState({});
   const [revenueStats, setRevenueStats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -25,27 +47,21 @@ const ProductDashboard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [inventoryRes, productRes, revenueRes] = await Promise.all([
-          fetch(`${API_ENDPOINT}/api/inventoryStats`),
+        const [ productRes, revenueRes] = await Promise.all([
           fetch(`${API_ENDPOINT}/api/productStats`),
           fetch(`${API_ENDPOINT}/api/productRevenueStats`),
         ]);
 
-        if (!inventoryRes.ok || !productRes.ok || !revenueRes.ok) {
+        if (!productRes.ok || !revenueRes.ok) {
           throw new Error("Failed to fetch data");
         }
 
-        const inventoryData = await inventoryRes.json();
         const productData = await productRes.json();
         const revenueData = await revenueRes.json();
 
-        setInventoryStats(inventoryData);
         setProductStats(productData);
         setRevenueStats(revenueData);
-        console.log(revenueData);
-        
-        console.log("revenueStats", revenueStats);
-        
+
       } catch (err) {
         setError(err.message);
       } finally {
@@ -59,13 +75,13 @@ const ProductDashboard = () => {
   const sortProducts = (items) => {
     if (!sortConfig.key) return items;
     console.log(items);
-    
+
     return [...items].sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? -1 : 1;
+        return sortConfig.direction === "asc" ? -1 : 1;
       }
       if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? 1 : -1;
+        return sortConfig.direction === "asc" ? 1 : -1;
       }
       return 0;
     });
@@ -73,22 +89,30 @@ const ProductDashboard = () => {
 
   const handleSort = (key) => {
     console.log();
-    
-    const direction = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+
+    const direction =
+      sortConfig.key === key && sortConfig.direction === "asc" ? "desc" : "asc";
     setSortConfig({ key, direction });
     console.log(sortConfig);
-    
   };
 
-
-  
-  
   const sortedProducts = sortProducts(revenueStats);
   const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  const mostStock = revenueStats
+    .sort((a, b) => b.stock_quantity - a.stock_quantity)
+    .slice(0, 5);
+
+  console.log("mostStock", mostStock);
+
+  const mostRevenue = revenueStats
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 5);
+
 
   if (loading) {
     return (
@@ -105,7 +129,6 @@ const ProductDashboard = () => {
       </div>
     );
   }
-
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -128,7 +151,7 @@ const ProductDashboard = () => {
             <ArrowUpDown className="text-gray-500" />
           </div>
           <div className="space-y-4">
-            {inventoryStats.inventoryStats.map((product, index) => (
+            {mostStock.map((product, index) => (
               <div
                 key={product.id}
                 className="flex justify-between items-center"
@@ -138,7 +161,7 @@ const ProductDashboard = () => {
                   <span className="ml-2 font-medium">{product.name}</span>
                 </div>
                 <span className="text-blue-600 font-semibold">
-                  {product.total_stock} sản phẩm
+                  {product.stock_quantity} sản phẩm
                 </span>
               </div>
             ))}
@@ -151,7 +174,7 @@ const ProductDashboard = () => {
             <DollarSign className="text-yellow-500" />
           </div>
           <div className="space-y-4">
-            {productStats.topProducts.map((product, index) => (
+            {mostRevenue.map((product, index) => (
               <div
                 key={product.id}
                 className="flex justify-between items-center"
@@ -246,42 +269,62 @@ const ProductDashboard = () => {
           </div>
         </div>
 
-          <div className="overflow-x-auto">
+        <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50">
                 <th className="p-4 text-left">
-                  <button onClick={() => handleSort('name')} className="flex items-center font-bold hover:text-blue-600">
+                  <button
+                    onClick={() => handleSort("name")}
+                    className="flex items-center font-bold hover:text-blue-600"
+                  >
                     Tên sản phẩm
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
-                  </th>
+                </th>
                 <th className="p-4 text-left">
-                  <button onClick={() => handleSort('stock_quantity')} className="flex items-center font-bold hover:text-blue-600">
+                  <button
+                    onClick={() => handleSort("stock_quantity")}
+                    className="flex items-center font-bold hover:text-blue-600"
+                  >
                     Tồn kho
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
                 </th>
                 <th className="p-4 text-left">
-                  <button onClick={() => handleSort('sold_quantity')} className="flex items-center font-bold hover:text-blue-600">
+                  <button
+                    onClick={() => handleSort("sold_quantity")}
+                    className="flex items-center font-bold hover:text-blue-600"
+                  >
                     Đã bán
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
                 </th>
                 <th className="p-4 text-left">
-                  <button onClick={() => handleSort('revenue')} className="flex items-center font-bold hover:text-blue-600">
+                  <button
+                    onClick={() => handleSort("revenue")}
+                    className="flex items-center font-bold hover:text-blue-600"
+                  >
                     Doanh thu
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
                 </th>
                 <th className="p-4 text-left">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedProducts.map((product) => (
+              </tr>
+            </thead>
+            <tbody>
+              {paginatedProducts.map((product) => (
                 <tr key={product.id} className="border-b hover:bg-gray-50">
                   <td className="p-4">{product.name}</td>
-                  <td className="p-4">{product.stock_quantity}</td>
+                  <td
+                    className={`p-4 ${
+                      product.stock_quantity > 500
+                        ? "text-red-600 font-bold"
+                        : ""
+                    }`}
+                  >
+                    {product.stock_quantity}
+                  </td>
                   <td className="p-4">{product.sold_quantity}</td>
                   <td className="p-4">{formatPrice(product.revenue)}</td>
                   <td className="p-4">
@@ -293,23 +336,24 @@ const ProductDashboard = () => {
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-        
         {/* Phân trang */}
         <div className="p-4 flex items-center justify-between border-t">
           <div className="text-sm text-gray-500">
-            Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến {Math.min(currentPage * ITEMS_PER_PAGE, revenueStats.length)} trong số {revenueStats.length} sản phẩm
+            Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến{" "}
+            {Math.min(currentPage * ITEMS_PER_PAGE, revenueStats.length)} trong
+            số {revenueStats.length} sản phẩm
           </div>
           <div className="flex items-center gap-2">
             <button
               className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
               disabled={currentPage === 1}
             >
               <ChevronLeft className="h-5 w-5" />
@@ -319,7 +363,9 @@ const ProductDashboard = () => {
             </span>
             <button
               className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+              }
               disabled={currentPage === totalPages}
             >
               <ChevronRight className="h-5 w-5" />
