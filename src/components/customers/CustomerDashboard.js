@@ -1,9 +1,7 @@
-// CustomerDashboard.js
-
 import React, { useState, useEffect, useCallback } from 'react';
 import StatsCard from '../StatsCard';
 import {
-    LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
 import { Search, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -24,7 +22,7 @@ const CustomerDashboard = () => {
     // Hàm gọi API để lấy danh sách khách hàng
     const fetchCustomers = useCallback(async () => {
         try {
-            setCustomers([]); // Đặt lại dữ liệu trước khi tải mới
+            setCustomers([]);
             const response = await fetch(
                 `${API}/api/users?page=${currentPage}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(
                     searchTerm
@@ -35,7 +33,7 @@ const CustomerDashboard = () => {
                 setCustomers(data.users);
                 setCustomerStats((prevStats) => ({
                     ...prevStats,
-                    totalUsers: data.total, // Cập nhật tổng số khách hàng từ API
+                    totalUsers: data.total,
                 }));
             } else {
                 console.error('Error fetching customers:', data.message);
@@ -45,11 +43,12 @@ const CustomerDashboard = () => {
         }
     }, [API, currentPage, searchTerm, sortConfig.key, sortConfig.direction]);
 
-    // Hàm gọi API để lấy thống kê khách hàng
+    // Hàm gọi API để lấy thống kê khách hàng mà không yêu cầu token
     const fetchCustomerStats = useCallback(async () => {
         try {
             const response = await fetch(`${API}/api/users/stats`);
             const data = await response.json();
+            console.log("Dữ liệu monthlyNewUsers:", data.monthlyNewUsers);
             if (response.ok && data.success) {
                 setCustomerStats({
                     totalUsers: data.totalUsers,
@@ -64,18 +63,15 @@ const CustomerDashboard = () => {
         }
     }, [API]);
 
-    // Gọi fetchCustomers và fetchCustomerStats khi component mount
     useEffect(() => {
         fetchCustomers();
         fetchCustomerStats();
     }, [fetchCustomers, fetchCustomerStats]);
 
-    // Gọi lại fetchCustomers khi thay đổi sortConfig hoặc currentPage
     useEffect(() => {
         fetchCustomers();
     }, [fetchCustomers]);
 
-    // Xử lý sắp xếp
     const handleSort = (key) => {
         let direction = 'asc';
         if (sortConfig.key === key && sortConfig.direction === 'asc') {
@@ -84,17 +80,19 @@ const CustomerDashboard = () => {
         setSortConfig({ key, direction });
     };
 
-    // Tính tổng số trang
     const totalPages = Math.ceil((customerStats.totalUsers || 0) / ITEMS_PER_PAGE);
+
+    const formattedMonthlyData = customerStats.monthlyNewUsers.map(item => ({
+        month: item.month,
+        newUsers: item.newUsers,
+    }));
 
     return (
         <div className="p-6 flex flex-col space-y-6 bg-gray-50 min-h-screen">
-            {/* Header */}
             <div className="flex justify-between items-center">
                 <h1 className="text-2xl font-bold">Quản lý Khách hàng</h1>
             </div>
 
-            {/* Thống kê */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <StatsCard
                     title="Tổng số khách hàng"
@@ -108,23 +106,21 @@ const CustomerDashboard = () => {
                 />
             </div>
 
-            {/* Biểu đồ khách hàng mới theo tháng */}
             <div className="bg-white p-4 rounded-lg shadow-md">
                 <h6 className="font-semibold mb-4">Biểu đồ khách hàng mới theo tháng</h6>
                 <ResponsiveContainer width="100%" height={400}>
-                    <LineChart data={customerStats.monthlyNewUsers}>
+                    <BarChart data={formattedMonthlyData}>
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="month" />
                         <YAxis allowDecimals={false} />
                         <Tooltip />
                         <Legend />
-                        <Line
-                            type="monotone"
+                        <Bar
                             dataKey="newUsers"
-                            stroke="#8884d8"
+                            fill="#8884d8"
                             name="Khách hàng mới"
                         />
-                    </LineChart>
+                    </BarChart>
                 </ResponsiveContainer>
             </div>
 
@@ -142,7 +138,7 @@ const CustomerDashboard = () => {
                                 value={searchTerm}
                                 onChange={(e) => {
                                     setSearchTerm(e.target.value);
-                                    setCurrentPage(1); // Reset về trang đầu khi thay đổi tìm kiếm
+                                    setCurrentPage(1);
                                 }}
                             />
                         </div>
@@ -203,7 +199,6 @@ const CustomerDashboard = () => {
                     </table>
                 </div>
 
-                {/* Phân trang */}
                 <div className="p-4 flex items-center justify-between border-t">
                     <div className="text-sm text-gray-500">
                         Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến{' '}
