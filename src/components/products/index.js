@@ -1,29 +1,26 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { Search, Plus, Edit2, Trash2, ArrowUpDown, TrendingUp, DollarSign, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, ArrowUpDown, TrendingUp, DollarSign, ChevronLeft, ChevronRight, ChevronDown, ChevronUp } from 'lucide-react';
 
-import { formatPrice } from '../../utils/FormatPrice'
+import { formatPrice } from "../../utils/FormatPrice";
 
 const ITEMS_PER_PAGE = 10;
-const CHART_ITEMS = 10;
 
 const ProductDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
-  const [chartFilter, setChartFilter] = useState('sales');
-  const [chartTimeRange, setChartTimeRange] = useState('all');
+  const [chartFilter, setChartFilter] = useState("sales");
+  const [chartTimeRange, setChartTimeRange] = useState("all");
 
-  // State for API data
   const [inventoryStats, setInventoryStats] = useState({});
   const [productStats, setProductStats] = useState({});
-  const [revenueStats, setRevenueStats] = useState({});
+  const [revenueStats, setRevenueStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
-  // Fetch data from APIs
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -31,28 +28,24 @@ const ProductDashboard = () => {
         const [inventoryRes, productRes, revenueRes] = await Promise.all([
           fetch(`${API_ENDPOINT}/api/inventoryStats`),
           fetch(`${API_ENDPOINT}/api/productStats`),
-          fetch(`${API_ENDPOINT}/api/productRevenueStats`)
+          fetch(`${API_ENDPOINT}/api/productRevenueStats`),
         ]);
 
         if (!inventoryRes.ok || !productRes.ok || !revenueRes.ok) {
-          throw new Error('Failed to fetch data');
+          throw new Error("Failed to fetch data");
         }
 
         const inventoryData = await inventoryRes.json();
-        console.log("inventoryData", inventoryData);
-        
         const productData = await productRes.json();
-
-        console.log("productData", productData);
-        
         const revenueData = await revenueRes.json();
-
-        console.log("revenueData", revenueData);
-        
 
         setInventoryStats(inventoryData);
         setProductStats(productData);
         setRevenueStats(revenueData);
+        console.log(revenueData);
+        
+        console.log("revenueStats", revenueStats);
+        
       } catch (err) {
         setError(err.message);
       } finally {
@@ -63,28 +56,10 @@ const ProductDashboard = () => {
     fetchData();
   }, []);
 
-  // Combine data for products table
-  const products = useMemo(() => {
-    if (!inventoryStats.length || !productStats.length || !revenueStats.length) return [];
-    
-    return inventoryStats.map(inventory => {
-      const productStat = productStats.find(p => p.id === inventory.id) || {};
-      const revenueStat = revenueStats.find(r => r.id === inventory.id) || {};
-      
-      return {
-        id: inventory.id,
-        name: inventory.name,
-        price: inventory.price,
-        stock: inventory.stock,
-        sales: productStat.sales || 0,
-        revenue: revenueStat.revenue || 0
-      };
-    });
-  }, [inventoryStats, productStats, revenueStats]);
-
-  // Sort products
   const sortProducts = (items) => {
     if (!sortConfig.key) return items;
+    console.log(items);
+    
     return [...items].sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
         return sortConfig.direction === 'asc' ? -1 : 1;
@@ -97,42 +72,23 @@ const ProductDashboard = () => {
   };
 
   const handleSort = (key) => {
+    console.log();
+    
     const direction = sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc';
     setSortConfig({ key, direction });
+    console.log(sortConfig);
+    
   };
 
-  // Filter and sort products
-  const filteredProducts = useMemo(() => {
-    return sortProducts(products.filter(product =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    ));
-  }, [products, searchTerm, sortConfig]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
-  const paginatedProducts = filteredProducts.slice(
+  
+  
+  const sortedProducts = sortProducts(revenueStats);
+  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
-
-  // Chart data
-  const chartData = useMemo(() => {
-    const sortedProducts = [...filteredProducts].sort((a, b) => {
-      if (chartFilter === 'sales') {
-        return b.sales - a.sales;
-      }
-      return b.revenue - a.revenue;
-    });
-
-    return sortedProducts.slice(0, CHART_ITEMS).reverse();
-  }, [filteredProducts, chartFilter]);
-
-  // Top products
-  const topProducts = useMemo(() => {
-    return [...filteredProducts]
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-  }, [filteredProducts]);
 
   if (loading) {
     return (
@@ -150,6 +106,7 @@ const ProductDashboard = () => {
     );
   }
 
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
@@ -165,17 +122,24 @@ const ProductDashboard = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Top sản phẩm tồn kho nhiều</h3>
+            <h3 className="text-lg font-semibold">
+              Top sản phẩm tồn kho nhiều
+            </h3>
             <ArrowUpDown className="text-gray-500" />
           </div>
           <div className="space-y-4">
             {inventoryStats.inventoryStats.map((product, index) => (
-              <div key={product.id} className="flex justify-between items-center">
+              <div
+                key={product.id}
+                className="flex justify-between items-center"
+              >
                 <div>
                   <span className="text-gray-600">#{index + 1}</span>
                   <span className="ml-2 font-medium">{product.name}</span>
                 </div>
-                <span className="text-blue-600 font-semibold">{product.total_stock} sản phẩm</span>
+                <span className="text-blue-600 font-semibold">
+                  {product.total_stock} sản phẩm
+                </span>
               </div>
             ))}
           </div>
@@ -188,7 +152,10 @@ const ProductDashboard = () => {
           </div>
           <div className="space-y-4">
             {productStats.topProducts.map((product, index) => (
-              <div key={product.id} className="flex justify-between items-center">
+              <div
+                key={product.id}
+                className="flex justify-between items-center"
+              >
                 <div>
                   <span className="text-gray-600">#{index + 1}</span>
                   <span className="ml-2 font-medium">{product.name}</span>
@@ -203,108 +170,62 @@ const ProductDashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold">Biểu đồ {chartFilter === 'sales' ? 'doanh số' : 'doanh thu'}</h3>
-            <div className="flex gap-4">
-              <select 
-                className="border rounded-lg px-3 py-2"
-                value={chartFilter}
-                onChange={(e) => setChartFilter(e.target.value)}
-              >
-                <option value="sales">Doanh số</option>
-                <option value="revenue">Doanh thu</option>
-              </select>
-              <select 
-                className="border rounded-lg px-3 py-2"
-                value={chartTimeRange}
-                onChange={(e) => setChartTimeRange(e.target.value)}
-              >
-                <option value="week">Tuần này</option>
-                <option value="month">Tháng này</option>
-                <option value="year">Năm nay</option>
-                <option value="all">Tất cả</option>
-              </select>
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart
-              data={chartData}
-              layout="vertical"
-              margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold">
+            Biểu đồ {chartFilter === "sales" ? "doanh số" : "doanh thu"}
+          </h3>
+          <div className="flex gap-4">
+            <select
+              className="border rounded-lg px-3 py-2"
+              value={chartFilter}
+              onChange={(e) => {
+                setChartFilter(e.target.value);
+              }}
             >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" />
-              <YAxis 
-                type="category" 
-                dataKey="name"
-                width={100}
-              />
-              <Tooltip 
-                formatter={(value) => [formatPrice(value), chartFilter === 'sales' ? 'Số lượng' : 'Doanh thu']}
-              />
-              <Legend />
-              <Bar 
-                dataKey={chartFilter}
-                fill={chartFilter === 'sales' ? "#82ca9d" : "#8884d8"}
-                name={chartFilter === 'sales' ? "Số lượng bán" : "Doanh thu"}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold">Biểu đồ tồn kho</h3>
-            <div className="flex gap-4">
-              <select 
-                className="border rounded-lg px-3 py-2"
-                value={chartTimeRange}
-                onChange={(e) => setChartTimeRange(e.target.value)}
-              >
-                <option value="week">Tuần này</option>
-                <option value="month">Tháng này</option>
-                <option value="year">Năm nay</option>
-                <option value="all">Tất cả</option>
-              </select>
-            </div>
+              <option value="sales">Doanh số</option>
+              <option value="revenue">Doanh thu</option>
+            </select>
+            <select
+              className="border rounded-lg px-3 py-2"
+              value={chartTimeRange}
+              onChange={(e) => setChartTimeRange(e.target.value)}
+            >
+              <option value="week">Tuần này</option>
+              <option value="month">Tháng này</option>
+              <option value="year">Năm nay</option>
+              <option value="all">Tất cả</option>
+            </select>
           </div>
-          <ResponsiveContainer width="100%" height={400}>
-            {filteredProducts.length > 0 ? (
-              <LineChart
-                data={filteredProducts.slice(0, 10)}
-                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis 
-                  dataKey="name"
-                  angle={-45}
-                  textAnchor="end"
-                  height={100}
-                />
-                <YAxis 
-                  type="number"
-                  domain={['dataMin', 'dataMax']}
-                />
-                <Tooltip 
-                  formatter={(value) => [formatPrice(value), 'Tồn kho']}
-                />
-                <Legend />
-                <Line 
-                  type="monotone"
-                  dataKey="stock"
-                  stroke="#82ca9d"
-                  name="Tồn kho"
-                />
-              </LineChart>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <span className="text-gray-500">Không có dữ liệu để hiển thị</span>
-              </div>
-            )}
-          </ResponsiveContainer>
         </div>
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart
+            data={productStats.salesByTime}
+            layout="vertical"
+            margin={{ top: 6, right: 30, left: 100, bottom: 5 }}
+          >
+            <CartesianGrid />
+            <XAxis
+              type="number"
+              tickFormatter={(value) => formatPrice(value)}
+            />
+            <YAxis dataKey="period" type="category" />
+            <Tooltip
+              formatter={(value) => [
+                formatPrice(value),
+                chartFilter !== "revenue" ? "Quantity" : "Revenue",
+              ]}
+            />
+            <Legend />
+            <Bar
+              dataKey={
+                chartFilter !== "revenue" ? "total_quantity" : "total_revenue"
+              }
+              fill={chartFilter !== "revenue" ? "#82ca9d" : "#8884d8"}
+              name={chartFilter !== "revenue" ? "Quantity" : "Revenue"}
+            />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
       {/* Products Table */}
@@ -316,8 +237,8 @@ const ProductDashboard = () => {
               <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
               <input
                 type="text"
-                placeholder="Tìm kiếm sản phẩm..."
-                className="pl-10 pr-4 py-2 border rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-10 pr-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Tìm kiếm sản phẩm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -325,7 +246,7 @@ const ProductDashboard = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b bg-gray-50">
@@ -334,21 +255,15 @@ const ProductDashboard = () => {
                     Tên sản phẩm
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
-                </th>
+                  </th>
                 <th className="p-4 text-left">
-                  <button onClick={() => handleSort('price')} className="flex items-center font-bold hover:text-blue-600">
-                    Giá
-                    <ArrowUpDown className="ml-2 h-4 w-4" />
-                  </button>
-                </th>
-                <th className="p-4 text-left">
-                  <button onClick={() => handleSort('stock')} className="flex items-center font-bold hover:text-blue-600">
+                  <button onClick={() => handleSort('stock_quantity')} className="flex items-center font-bold hover:text-blue-600">
                     Tồn kho
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
                 </th>
                 <th className="p-4 text-left">
-                  <button onClick={() => handleSort('sales')} className="flex items-center font-bold hover:text-blue-600">
+                  <button onClick={() => handleSort('sold_quantity')} className="flex items-center font-bold hover:text-blue-600">
                     Đã bán
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
@@ -360,16 +275,15 @@ const ProductDashboard = () => {
                   </button>
                 </th>
                 <th className="p-4 text-left">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedProducts.map((product) => (
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedProducts.map((product) => (
                 <tr key={product.id} className="border-b hover:bg-gray-50">
                   <td className="p-4">{product.name}</td>
-                  <td className="p-4">{product.price.toLocaleString()}đ</td>
-                  <td className="p-4">{product.stock}</td>
-                  <td className="p-4">{product.sales}</td>
-                  <td className="p-4">{product.revenue.toLocaleString()}đ</td>
+                  <td className="p-4">{product.stock_quantity}</td>
+                  <td className="p-4">{product.sold_quantity}</td>
+                  <td className="p-4">{formatPrice(product.revenue)}</td>
                   <td className="p-4">
                     <div className="flex gap-2">
                       <button className="p-1 hover:text-blue-600">
@@ -379,18 +293,18 @@ const ProductDashboard = () => {
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
         
         {/* Phân trang */}
         <div className="p-4 flex items-center justify-between border-t">
           <div className="text-sm text-gray-500">
-            Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến {Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)} trong số {filteredProducts.length} sản phẩm
+            Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến {Math.min(currentPage * ITEMS_PER_PAGE, revenueStats.length)} trong số {revenueStats.length} sản phẩm
           </div>
           <div className="flex items-center gap-2">
             <button
