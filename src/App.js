@@ -24,51 +24,38 @@ const ProtectedRoute = ({ element }) => {
 function App() {
   return (
     <Router>
-      <div className="flex h-screen">
-        {/* Sidebar cố định bên trái với chiều cao đầy màn hình */}
-        <Sidebar className="w-1/5 h-full" />
-
-        {/* Phần nội dung chính */}
-        <div className="flex flex-col flex-1 h-full">
-          <Header className="h-[10%]" /> {/* Header chiếm 10% chiều cao màn hình */}
-          <div className="flex-1 overflow-auto">
-            {/* Phần chứa nội dung chính chiếm 90% còn lại */}
-            <Routes>
-              {/* Route điều hướng mặc định */}
-              <Route path="/" element={<Navigate to="/dashboard" />} />
-
-              {/* Route trang đăng nhập admin */}
-              <Route path="/admin/login" element={<AdminLogin />} />
-
-              {/* Các route được bảo vệ */}
-              <Route
-                path="/dashboard"
-                element={<ProtectedRoute element={<Dashboard />} />}
-              />
-              <Route
-                path="/product"
-                element={<ProtectedRoute element={<Product />} />}
-              />
-              <Route
-                path="/customers"
-                element={<ProtectedRoute element={<CustomerDashboard />} />}
-              />
-              <Route
-                path="/order"
-                element={<ProtectedRoute element={<OrderManagementDashboard />} />}
-              />
-              <Route
-                path="/category"
-                element={<ProtectedRoute element={<CategoryManagementDashboard />} />}
-              />
-              <Route
-                path="/reviews"
-                element={<ProtectedRoute element={<ReviewDashboard />} />}
-              />
-            </Routes>
-          </div>
-        </div>
-      </div>
+      <Routes>
+        {/* Trang đăng nhập admin là trang mặc định */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route
+          path="*"
+          element={
+            <ProtectedRoute
+              element={
+                <div className="flex h-screen">
+                  {/* Sidebar cố định bên trái với chiều cao đầy màn hình */}
+                  <Sidebar className="w-1/5 h-full" />
+                  {/* Phần nội dung chính */}
+                  <div className="flex flex-col flex-1 h-full">
+                    <Header className="h-[10%]" /> {/* Header chiếm 10% chiều cao màn hình */}
+                    <div className="flex-1 overflow-auto">
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/dashboard" />} />
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/product" element={<Product />} />
+                        <Route path="/customers" element={<CustomerDashboard />} />
+                        <Route path="/order" element={<OrderManagementDashboard />} />
+                        <Route path="/category" element={<CategoryManagementDashboard />} />
+                        <Route path="/reviews" element={<ReviewDashboard />} />
+                      </Routes>
+                    </div>
+                  </div>
+                </div>
+              }
+            />
+          }
+        />
+      </Routes>
     </Router>
   );
 }

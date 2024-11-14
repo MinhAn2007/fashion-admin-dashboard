@@ -11,12 +11,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { TbCategoryPlus, TbMessage } from "react-icons/tb";
 
 const Sidebar = () => {
-  //logout
   const navigate = useNavigate();
 
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
-    navigate("/admin/login", { state: { message: "Đăng xuất thành công" } });
+    navigate("/admin/login");
   };
 
   return (
@@ -65,8 +64,6 @@ const Sidebar = () => {
       >
         <FiLogOut className="mr-2" /> Đăng xuất
       </button>
-
-
     </div>
   );
 };

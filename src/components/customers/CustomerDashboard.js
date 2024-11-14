@@ -23,10 +23,20 @@ const CustomerDashboard = () => {
     const fetchCustomers = useCallback(async () => {
         try {
             setCustomers([]);
+            const token = localStorage.getItem("adminToken"); // Lấy token từ localStorage
+            if (!token) {
+                console.error('Token không tồn tại');
+                return;
+            }
             const response = await fetch(
                 `${API}/api/users?page=${currentPage}&limit=${ITEMS_PER_PAGE}&search=${encodeURIComponent(
                     searchTerm
-                )}&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`
+                )}&sortBy=${sortConfig.key}&sortOrder=${sortConfig.direction}`,
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
             );
             const data = await response.json();
             if (response.ok && data.success) {
@@ -43,12 +53,20 @@ const CustomerDashboard = () => {
         }
     }, [API, currentPage, searchTerm, sortConfig.key, sortConfig.direction]);
 
-    // Hàm gọi API để lấy thống kê khách hàng mà không yêu cầu token
+    // Hàm gọi API để lấy thống kê khách hàng
     const fetchCustomerStats = useCallback(async () => {
         try {
-            const response = await fetch(`${API}/api/users/stats`);
+            const token = localStorage.getItem("adminToken"); // Lấy token từ localStorage
+            if (!token) {
+                console.error('Token không tồn tại');
+                return;
+            }
+            const response = await fetch(`${API}/api/users/stats`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
             const data = await response.json();
-            console.log("Dữ liệu monthlyNewUsers:", data.monthlyNewUsers);
             if (response.ok && data.success) {
                 setCustomerStats({
                     totalUsers: data.totalUsers,
@@ -67,10 +85,6 @@ const CustomerDashboard = () => {
         fetchCustomers();
         fetchCustomerStats();
     }, [fetchCustomers, fetchCustomerStats]);
-
-    useEffect(() => {
-        fetchCustomers();
-    }, [fetchCustomers]);
 
     const handleSort = (key) => {
         let direction = 'asc';

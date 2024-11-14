@@ -1,24 +1,15 @@
-import React, { useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const AdminLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [logoutMessage, setLogoutMessage] = useState('');
     const navigate = useNavigate();
-    const location = useLocation();
     const API = process.env.REACT_APP_API_ENDPOINT;
-
-    useEffect(() => {
-        if (location.state && location.state.message) {
-            setLogoutMessage(location.state.message);
-        }
-    }, [location.state]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        setLogoutMessage('');
         try {
             const response = await fetch(`${API}/api/admin/login`, {
                 method: 'POST',
@@ -41,14 +32,9 @@ const AdminLogin = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600">
-            <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-lg transform transition duration-500 hover:shadow-2xl">
+        <div className="flex items-center justify-center min-h-screen bg-white">
+            <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-lg">
                 <h2 className="text-3xl font-bold text-center text-indigo-600">Admin Login</h2>
-                {logoutMessage && (
-                    <div className="p-3 mb-4 text-green-700 bg-green-100 rounded-lg text-center">
-                        {logoutMessage}
-                    </div>
-                )}
                 {error && (
                     <div className="p-3 mb-4 text-red-700 bg-red-100 rounded-lg text-center">
                         {error}
@@ -82,10 +68,7 @@ const AdminLogin = () => {
                         Đăng nhập
                     </button>
                 </form>
-                <div className="flex items-center justify-center mt-6">
-                    <p className="text-sm text-gray-600">Quên mật khẩu?</p>
-                    <a href="#" className="ml-2 text-indigo-600 hover:text-indigo-800 text-sm">Khôi phục tại đây</a>
-                </div>
+
             </div>
         </div>
     );
