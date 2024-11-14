@@ -11,7 +11,6 @@ const AdminLogin = () => {
     const API = process.env.REACT_APP_API_ENDPOINT;
 
     useEffect(() => {
-        // Kiểm tra nếu có thông báo đăng xuất thành công từ location.state
         if (location.state && location.state.message) {
             setLogoutMessage(location.state.message);
         }
@@ -19,7 +18,7 @@ const AdminLogin = () => {
 
     const handleLogin = async (e) => {
         e.preventDefault();
-        setLogoutMessage(''); // Xóa thông báo đăng xuất nếu có
+        setLogoutMessage('');
         try {
             const response = await fetch(`${API}/api/admin/login`, {
                 method: 'POST',
@@ -42,37 +41,52 @@ const AdminLogin = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100">
-            <form className="bg-white p-6 rounded shadow-md" onSubmit={handleLogin}>
-                <h2 className="text-2xl mb-4">Admin Login</h2>
+        <div className="flex items-center justify-center min-h-screen bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-600">
+            <div className="w-full max-w-md p-8 space-y-4 bg-white rounded-lg shadow-lg transform transition duration-500 hover:shadow-2xl">
+                <h2 className="text-3xl font-bold text-center text-indigo-600">Admin Login</h2>
                 {logoutMessage && (
-                    <div className="mb-4 text-green-600">{logoutMessage}</div>
+                    <div className="p-3 mb-4 text-green-700 bg-green-100 rounded-lg text-center">
+                        {logoutMessage}
+                    </div>
                 )}
-                {error && <div className="mb-4 text-red-600">{error}</div>}
-                <div className="mb-4">
-                    <label>Email</label>
-                    <input
-                        type="email"
-                        className="w-full p-2 border rounded"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                    />
+                {error && (
+                    <div className="p-3 mb-4 text-red-700 bg-red-100 rounded-lg text-center">
+                        {error}
+                    </div>
+                )}
+                <form onSubmit={handleLogin} className="space-y-6">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Email</label>
+                        <input
+                            type="email"
+                            className="w-full p-3 mt-1 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-indigo-200 focus:border-indigo-500 transition"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
+                        <input
+                            type="password"
+                            className="w-full p-3 mt-1 border border-gray-300 rounded-lg focus:outline-none focus:ring focus:ring-indigo-200 focus:border-indigo-500 transition"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        className="w-full p-3 font-semibold text-white bg-indigo-600 rounded-lg shadow-lg hover:bg-indigo-700 transition duration-300"
+                    >
+                        Đăng nhập
+                    </button>
+                </form>
+                <div className="flex items-center justify-center mt-6">
+                    <p className="text-sm text-gray-600">Quên mật khẩu?</p>
+                    <a href="#" className="ml-2 text-indigo-600 hover:text-indigo-800 text-sm">Khôi phục tại đây</a>
                 </div>
-                <div className="mb-4">
-                    <label>Mật khẩu</label>
-                    <input
-                        type="password"
-                        className="w-full p-2 border rounded"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        required
-                    />
-                </div>
-                <button type="submit" className="w-full p-2 bg-blue-600 text-white rounded">
-                    Đăng nhập
-                </button>
-            </form>
+            </div>
         </div>
     );
 };
