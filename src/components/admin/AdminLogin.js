@@ -1,17 +1,27 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const AdminLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [logoutMessage, setLogoutMessage] = useState('');
     const navigate = useNavigate();
+    const location = useLocation();
     const API = process.env.REACT_APP_API_ENDPOINT;
+
+    useEffect(() => {
+        // Kiểm tra nếu có thông báo đăng xuất thành công từ location.state
+        if (location.state && location.state.message) {
+            setLogoutMessage(location.state.message);
+        }
+    }, [location.state]);
 
     const handleLogin = async (e) => {
         e.preventDefault();
+        setLogoutMessage(''); // Xóa thông báo đăng xuất nếu có
         try {
-            const response = await fetch(`${API}/api/login`, {
+            const response = await fetch(`${API}/api/admin/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -20,9 +30,7 @@ const AdminLogin = () => {
             });
             const data = await response.json();
             if (response.ok) {
-                // Lưu token vào localStorage
-                localStorage.setItem('token', data.token);
-                // Chuyển hướng đến trang admin dashboard
+                localStorage.setItem('adminToken', data.token);
                 navigate('/dashboard');
             } else {
                 setError(data.message || 'Đăng nhập thất bại');
@@ -37,6 +45,9 @@ const AdminLogin = () => {
         <div className="flex items-center justify-center min-h-screen bg-gray-100">
             <form className="bg-white p-6 rounded shadow-md" onSubmit={handleLogin}>
                 <h2 className="text-2xl mb-4">Admin Login</h2>
+                {logoutMessage && (
+                    <div className="mb-4 text-green-600">{logoutMessage}</div>
+                )}
                 {error && <div className="mb-4 text-red-600">{error}</div>}
                 <div className="mb-4">
                     <label>Email</label>

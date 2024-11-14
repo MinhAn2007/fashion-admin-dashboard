@@ -5,11 +5,15 @@ import {
   FiUsers,
   FiSettings,
   FiBox,
+  FiLogOut,
 } from "react-icons/fi";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { TbCategoryPlus, TbMessage } from "react-icons/tb";
 
 const Sidebar = () => {
+  //logout
+
+
   return (
     <div className="w-48 h-dvh min-h-screen bg-gray-800 text-white flex flex-col p-4">
       <Link to="/" className="flex items-center mb-4">
@@ -50,6 +54,8 @@ const Sidebar = () => {
           <FiSettings className="mr-2" /> Cài đặt
         </li>
       </ul>
+
+
     </div>
   );
 };
