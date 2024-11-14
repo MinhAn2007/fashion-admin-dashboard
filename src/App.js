@@ -13,6 +13,13 @@ import CustomerDashboard from "./components/customers/CustomerDashboard";
 import OrderManagementDashboard from "./components/orders";
 import CategoryManagementDashboard from "./components/category";
 import ReviewDashboard from "./components/review/ReviewDashboard";
+import AdminLogin from "./components/admin/AdminLogin"; // Import trang đăng nhập admin
+
+// Component bảo vệ các route cần đăng nhập
+const ProtectedRoute = ({ element }) => {
+  const isAuthenticated = !!localStorage.getItem("adminToken");
+  return isAuthenticated ? element : <Navigate to="/admin/login" />;
+};
 
 function App() {
   return (
@@ -27,13 +34,37 @@ function App() {
           <div className="flex-1 overflow-auto">
             {/* Phần chứa nội dung chính chiếm 90% còn lại */}
             <Routes>
+              {/* Route điều hướng mặc định */}
               <Route path="/" element={<Navigate to="/dashboard" />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/product" element={<Product />} />
-              <Route path="/customers" element={<CustomerDashboard />} />
-              <Route path="/order" element={<OrderManagementDashboard />} />
-              <Route path="/category" element={<CategoryManagementDashboard />} />
-              <Route path="/reviews" element={<ReviewDashboard />} />
+
+              {/* Route trang đăng nhập admin */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+
+              {/* Các route được bảo vệ */}
+              <Route
+                path="/dashboard"
+                element={<ProtectedRoute element={<Dashboard />} />}
+              />
+              <Route
+                path="/product"
+                element={<ProtectedRoute element={<Product />} />}
+              />
+              <Route
+                path="/customers"
+                element={<ProtectedRoute element={<CustomerDashboard />} />}
+              />
+              <Route
+                path="/order"
+                element={<ProtectedRoute element={<OrderManagementDashboard />} />}
+              />
+              <Route
+                path="/category"
+                element={<ProtectedRoute element={<CategoryManagementDashboard />} />}
+              />
+              <Route
+                path="/reviews"
+                element={<ProtectedRoute element={<ReviewDashboard />} />}
+              />
             </Routes>
           </div>
         </div>
