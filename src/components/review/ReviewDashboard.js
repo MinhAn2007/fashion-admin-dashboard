@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import StatsCard from '../StatsCard';
 
 const COLORS = {
     positive: '#0088FE', // Xanh dương
@@ -19,15 +20,24 @@ const ReviewDashboard = () => {
     useEffect(() => {
         const fetchReviewStats = async () => {
             try {
-                const response = await fetch(`${API}/api/reviews/statistics`);
-                const data = await response.json();
-                if (data.success) {
+                const [reviewStatsRes, monthlyReviewsRes] = await Promise.all([
+                    fetch(`${API}/api/reviews/statistics`),
+                    fetch(`${API}/api/reviews/monthly-statistics`)
+                ]);
+
+                const reviewStatsData = await reviewStatsRes.json();
+                const monthlyReviewsData = await monthlyReviewsRes.json();
+
+                if (reviewStatsData.success) {
                     setReviewStats({
-                        totalReviews: data.totalReviews,
-                        positiveReviews: data.positiveReviews,
-                        negativeReviews: data.negativeReviews,
+                        totalReviews: reviewStatsData.totalReviews,
+                        positiveReviews: reviewStatsData.positiveReviews,
+                        negativeReviews: reviewStatsData.negativeReviews,
                     });
-                    setMonthlyReviews(data.monthlyReviews || []);
+                }
+
+                if (monthlyReviewsData.success) {
+                    setMonthlyReviews(monthlyReviewsData.monthlyReviews);
                 }
             } catch (error) {
                 console.error('Error fetching review statistics:', error);
@@ -63,6 +73,25 @@ const ReviewDashboard = () => {
     return (
         <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
             <h1 className="text-2xl font-bold mb-6">Thống kê Đánh Giá Khách Hàng</h1>
+
+            {/* Stats Cards */}
+            <div className="flex justify-between gap-10 mb-6">
+                <StatsCard
+                    title="Tổng số đánh giá"
+                    value={reviewStats.totalReviews}
+                    color="bg-green-400" // Màu xanh lá cây cho tổng số
+                />
+                <StatsCard
+                    title="Đánh giá tích cực"
+                    value={reviewStats.positiveReviews}
+                    color="bg-blue-400" // Màu xanh dương cho tích cực
+                />
+                <StatsCard
+                    title="Đánh giá tiêu cực"
+                    value={reviewStats.negativeReviews}
+                    color="bg-orange-400" // Màu gạch cho tiêu cực
+                />
+            </div>
 
             {/* Biểu đồ Pie cho tỷ lệ tích cực / tiêu cực */}
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
@@ -108,7 +137,20 @@ const ReviewDashboard = () => {
             </div>
 
             {/* Biểu đồ lịch sử đánh giá theo tháng */}
-
+            <div className="bg-white rounded-lg shadow-sm p-6">
+                <h2 className="text-lg font-semibold mb-4">Lịch sử đánh giá theo tháng</h2>
+                <ResponsiveContainer width="100%" height={400}>
+                    <LineChart data={monthlyReviews}>
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis />
+                        <Tooltip />
+                        <Legend />
+                        <Line type="monotone" dataKey="positive" stroke={COLORS.positive} name="Tích cực" />
+                        <Line type="monotone" dataKey="negative" stroke={COLORS.negative} name="Tiêu cực" />
+                    </LineChart>
+                </ResponsiveContainer>
+            </div>
         </div>
     );
 };
