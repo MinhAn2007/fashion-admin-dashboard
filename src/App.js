@@ -13,7 +13,8 @@ import CustomerDashboard from "./components/customers/CustomerDashboard";
 import OrderManagementDashboard from "./components/orders";
 import CategoryManagementDashboard from "./components/category";
 import ReviewDashboard from "./components/review/ReviewDashboard";
-import AdminLogin from "./components/admin/AdminLogin"; // Import trang đăng nhập admin
+import AdminLogin from "./components/admin/AdminLogin"; 
+import ProductDetails from "./components/products/details/index";
 
 // Component bảo vệ các route cần đăng nhập
 const ProtectedRoute = ({ element }) => {
@@ -43,6 +44,8 @@ function App() {
                         <Route path="/" element={<Navigate to="/dashboard" />} />
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/product" element={<Product />} />
+                        <Route path="/detail/:id" element={<ProductDetails />} />
+
                         <Route path="/customers" element={<CustomerDashboard />} />
                         <Route path="/order" element={<OrderManagementDashboard />} />
                         <Route path="/category" element={<CategoryManagementDashboard />} />

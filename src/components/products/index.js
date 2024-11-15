@@ -8,8 +8,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  LineChart,
-  Line,
 } from "recharts";
 import {
   Search,
@@ -17,15 +15,14 @@ import {
   Edit2,
   Trash2,
   ArrowUpDown,
-  TrendingUp,
   DollarSign,
   ChevronLeft,
   ChevronRight,
-  ChevronDown,
-  ChevronUp,
+  Warehouse,
 } from "lucide-react";
 
 import { formatPrice } from "../../utils/FormatPrice";
+import { useNavigate } from "react-router-dom";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -35,6 +32,7 @@ const ProductDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [chartFilter, setChartFilter] = useState("sales");
   const [chartTimeRange, setChartTimeRange] = useState("all");
+  const navigate = useNavigate();
 
   const [productStats, setProductStats] = useState({});
   const [revenueStats, setRevenueStats] = useState([]);
@@ -47,7 +45,7 @@ const ProductDashboard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const [ productRes, revenueRes] = await Promise.all([
+        const [productRes, revenueRes] = await Promise.all([
           fetch(`${API_ENDPOINT}/api/productStats`),
           fetch(`${API_ENDPOINT}/api/productRevenueStats`),
         ]);
@@ -61,7 +59,6 @@ const ProductDashboard = () => {
 
         setProductStats(productData);
         setRevenueStats(revenueData);
-
       } catch (err) {
         setError(err.message);
       } finally {
@@ -72,9 +69,22 @@ const ProductDashboard = () => {
     fetchData();
   }, []);
 
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const filterProducts = (items) => {
+    if (!searchTerm.trim()) return items;
+
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    return items.filter((product) =>
+      product.name.toLowerCase().includes(searchTermLower)
+    );
+  };
+
   const sortProducts = (items) => {
     if (!sortConfig.key) return items;
-    console.log(items);
 
     return [...items].sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -88,15 +98,14 @@ const ProductDashboard = () => {
   };
 
   const handleSort = (key) => {
-    console.log();
-
     const direction =
       sortConfig.key === key && sortConfig.direction === "asc" ? "desc" : "asc";
     setSortConfig({ key, direction });
-    console.log(sortConfig);
   };
 
-  const sortedProducts = sortProducts(revenueStats);
+  // Apply filters, sorting, and pagination in sequence
+  const filteredProducts = filterProducts(revenueStats);
+  const sortedProducts = sortProducts(filteredProducts);
   const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = sortedProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -107,12 +116,9 @@ const ProductDashboard = () => {
     .sort((a, b) => b.stock_quantity - a.stock_quantity)
     .slice(0, 5);
 
-  console.log("mostStock", mostStock);
-
   const mostRevenue = revenueStats
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
-
 
   if (loading) {
     return (
@@ -148,7 +154,7 @@ const ProductDashboard = () => {
             <h3 className="text-lg font-semibold">
               Top sản phẩm tồn kho nhiều
             </h3>
-            <ArrowUpDown className="text-gray-500" />
+            <Warehouse className="text-gray-500" />
           </div>
           <div className="space-y-4">
             {mostStock.map((product, index) => (
@@ -202,9 +208,7 @@ const ProductDashboard = () => {
             <select
               className="border rounded-lg px-3 py-2"
               value={chartFilter}
-              onChange={(e) => {
-                setChartFilter(e.target.value);
-              }}
+              onChange={(e) => setChartFilter(e.target.value)}
             >
               <option value="sales">Doanh số</option>
               <option value="revenue">Doanh thu</option>
@@ -314,7 +318,11 @@ const ProductDashboard = () => {
             </thead>
             <tbody>
               {paginatedProducts.map((product) => (
-                <tr key={product.id} className="border-b hover:bg-gray-50">
+                <tr
+                  key={product.id}
+                  className="border-b hover:bg-gray-50"
+                  onClick={() => navigate(`/detail/${product.id}`)}
+                >
                   <td className="p-4">{product.name}</td>
                   <td
                     className={`p-4 ${
@@ -343,12 +351,12 @@ const ProductDashboard = () => {
           </table>
         </div>
 
-        {/* Phân trang */}
+        {/* Pagination */}
         <div className="p-4 flex items-center justify-between border-t">
           <div className="text-sm text-gray-500">
             Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến{" "}
-            {Math.min(currentPage * ITEMS_PER_PAGE, revenueStats.length)} trong
-            số {revenueStats.length} sản phẩm
+            {Math.min(currentPage * ITEMS_PER_PAGE, sortedProducts.length)}{" "}
+            trong số {sortedProducts.length} sản phẩm
           </div>
           <div className="flex items-center gap-2">
             <button
