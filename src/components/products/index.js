@@ -19,11 +19,20 @@ import {
   ChevronLeft,
   ChevronRight,
   Warehouse,
+  Eye,
 } from "lucide-react";
 
 import { formatPrice } from "../../utils/FormatPrice";
 import { useNavigate } from "react-router-dom";
-
+import {
+  Modal,
+  ActionIcon,
+  Button,
+  Checkbox,
+  Password,
+  Text,
+  Input,
+} from "rizzui";
 const ITEMS_PER_PAGE = 10;
 
 const ProductDashboard = () => {
@@ -38,6 +47,8 @@ const ProductDashboard = () => {
   const [revenueStats, setRevenueStats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [isOpenEditModal, setIsOpenEditModal] = useState(false);
 
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
@@ -119,6 +130,12 @@ const ProductDashboard = () => {
   const mostRevenue = revenueStats
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
+
+  const openEditProduct = (e) => {
+    console.log("open edit product");
+    e.preventDefault();
+    setIsOpenEditModal(true);
+  };
 
   if (loading) {
     return (
@@ -318,34 +335,41 @@ const ProductDashboard = () => {
             </thead>
             <tbody>
               {paginatedProducts.map((product) => (
-                <tr
-                  key={product.id}
-                  className="border-b hover:bg-gray-50"
-                  onClick={() => navigate(`/detail/${product.id}`)}
-                >
-                  <td className="p-4">{product.name}</td>
-                  <td
-                    className={`p-4 ${
-                      product.stock_quantity > 500
-                        ? "text-red-600 font-bold"
-                        : ""
-                    }`}
-                  >
-                    {product.stock_quantity}
-                  </td>
-                  <td className="p-4">{product.sold_quantity}</td>
-                  <td className="p-4">{formatPrice(product.revenue)}</td>
-                  <td className="p-4">
-                    <div className="flex gap-2">
-                      <button className="p-1 hover:text-blue-600">
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button className="p-1 hover:text-red-600">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                <>
+                  <tr key={product.id} className="border-b hover:bg-gray-50">
+                    <td className="p-4">{product.name}</td>
+                    <td
+                      className={`p-4 ${
+                        product.stock_quantity > 500
+                          ? "text-red-600 font-bold"
+                          : ""
+                      }`}
+                    >
+                      {product.stock_quantity}
+                    </td>
+                    <td className="p-4">{product.sold_quantity}</td>
+                    <td className="p-4">{formatPrice(product.revenue)}</td>
+                    <td className="p-4">
+                      <div className="flex gap-2">
+                        <button
+                          className="p-1 hover:text-blue-600"
+                          onClick={(e) => openEditProduct(e)}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button className="p-1 hover:text-red-600">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="p-1 hover:text-green-600"
+                          onClick={() => navigate(`/detail/${product.id}`)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </>
               ))}
             </tbody>
           </table>
@@ -381,6 +405,60 @@ const ProductDashboard = () => {
           </div>
         </div>
       </div>
+      <Modal isOpen={isOpenEditModal} onClose={() => setIsOpenEditModal(false)}>
+        <div className="m-auto px-7 pt-6 pb-8 bg-white rounded-lg w-full">
+          <div className="mb-7 flex items-center justify-between">
+            <Text as="h3">Bạn đang chỉnh s</Text>
+            <ActionIcon
+              size="sm"
+              variant="text"
+              onClick={() => setIsOpenEditModal(false)}
+            ></ActionIcon>
+          </div>
+          <div className="grid grid-cols-2 gap-y-6 gap-x-5 [&_label>span]:font-medium">
+            <Input label="First Name *" inputClassName="border-2" size="lg" />
+            <Input label="Last Name *" inputClassName="border-2" size="lg" />
+            <Input
+              label="Email *"
+              inputClassName="border-2"
+              size="lg"
+              className="col-span-2"
+            />
+            <Password
+              label="Password *"
+              inputClassName="border-2"
+              size="lg"
+              className="col-span-2"
+            />
+            <Password
+              label="Confirm Password *"
+              inputClassName="border-2"
+              size="lg"
+              className="col-span-2"
+            />
+            <Checkbox
+              size="lg"
+              inputClassName="border-2"
+              className="col-span-2"
+              label={
+                <Text className="text-sm">
+                  I agree to RizzUI&lsquo;s{" "}
+                  <a className="underline">Terms of Service</a> and{" "}
+                  <a className="underline">Privacy Policy</a>
+                </Text>
+              }
+            />
+            <Button
+              type="submit"
+              size="lg"
+              className="col-span-2 mt-2"
+              onClick={() => setIsOpenEditModal(false)}
+            >
+              Create an Account
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
