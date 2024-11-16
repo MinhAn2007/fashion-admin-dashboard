@@ -146,8 +146,8 @@ const ReviewDashboard = () => {
                         <YAxis />
                         <Tooltip />
                         <Legend />
-                        <Line type="monotone" dataKey="positive" stroke={COLORS.positive} name="Tích cực" />
-                        <Line type="monotone" dataKey="negative" stroke={COLORS.negative} name="Tiêu cực" />
+                        <Line type="monotone" dataKey="positive" stroke={COLORS.positive} name="Tích cực" strokeWidth={2} />
+                        <Line type="monotone" dataKey="negative" stroke={COLORS.negative} name="Tiêu cực" strokeWidth={2} />
                     </LineChart>
                 </ResponsiveContainer>
             </div>

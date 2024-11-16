@@ -2,8 +2,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import StatsCard from '../StatsCard';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+    LineChart,
+    Line,
 } from 'recharts';
 import { Search, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+
 
 const ITEMS_PER_PAGE = 10;
 
@@ -137,6 +140,33 @@ const CustomerDashboard = () => {
                     </BarChart>
                 </ResponsiveContainer>
             </div>
+
+            <div className="bg-white p-4 rounded-lg shadow-md">
+                <h6 className="font-semibold mb-4">Biểu đồ khách hàng theo thời gian</h6>
+                <ResponsiveContainer width="100%" height={400}>
+                    {formattedMonthlyData.length > 0 ? (
+                        <LineChart data={formattedMonthlyData}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="month" />
+                            <YAxis allowDecimals={false} />
+                            <Tooltip />
+                            <Line
+                                type="monotone"
+                                dataKey="newUsers"
+                                stroke="#82ca9d"
+                                strokeWidth={3}
+                                name="Khách hàng mới"
+                            />
+                        </LineChart>
+                    ) : (
+                        <div className="text-center text-gray-500">
+                            Không có dữ liệu để hiển thị
+                        </div>
+                    )}
+                </ResponsiveContainer>
+            </div>
+
+
 
             {/* Bảng khách hàng */}
             <div className="bg-white rounded-lg shadow-sm">
