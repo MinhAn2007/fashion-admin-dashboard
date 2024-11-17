@@ -24,15 +24,8 @@ import {
 
 import { formatPrice } from "../../utils/FormatPrice";
 import { useNavigate } from "react-router-dom";
-import {
-  Modal,
-  ActionIcon,
-  Button,
-  Checkbox,
-  Password,
-  Text,
-  Input,
-} from "rizzui";
+
+import EditProductModal from "./EditModal";
 const ITEMS_PER_PAGE = 10;
 
 const ProductDashboard = () => {
@@ -49,6 +42,7 @@ const ProductDashboard = () => {
   const [error, setError] = useState(null);
 
   const [isOpenEditModal, setIsOpenEditModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
 
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
@@ -131,12 +125,15 @@ const ProductDashboard = () => {
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
 
-  const openEditProduct = (e) => {
-    console.log("open edit product");
-    e.preventDefault();
+  const openEditProduct = (product) => {
+    setSelectedProduct(product);
     setIsOpenEditModal(true);
   };
 
+  const handleCloseModal = () => {
+    setIsOpenEditModal(false);
+    setSelectedProduct(null);
+  };
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -335,7 +332,6 @@ const ProductDashboard = () => {
             </thead>
             <tbody>
               {paginatedProducts.map((product) => (
-                <>
                   <tr key={product.id} className="border-b hover:bg-gray-50">
                     <td className="p-4">{product.name}</td>
                     <td
@@ -353,7 +349,7 @@ const ProductDashboard = () => {
                       <div className="flex gap-2">
                         <button
                           className="p-1 hover:text-blue-600"
-                          onClick={(e) => openEditProduct(e)}
+                          onClick={() => openEditProduct(product)}
                         >
                           <Edit2 className="h-4 w-4" />
                         </button>
@@ -369,7 +365,6 @@ const ProductDashboard = () => {
                       </div>
                     </td>
                   </tr>
-                </>
               ))}
             </tbody>
           </table>
@@ -405,60 +400,11 @@ const ProductDashboard = () => {
           </div>
         </div>
       </div>
-      <Modal isOpen={isOpenEditModal} onClose={() => setIsOpenEditModal(false)}>
-        <div className="m-auto px-7 pt-6 pb-8 bg-white rounded-lg w-full">
-          <div className="mb-7 flex items-center justify-between">
-            <Text as="h3">Bạn đang chỉnh s</Text>
-            <ActionIcon
-              size="sm"
-              variant="text"
-              onClick={() => setIsOpenEditModal(false)}
-            ></ActionIcon>
-          </div>
-          <div className="grid grid-cols-2 gap-y-6 gap-x-5 [&_label>span]:font-medium">
-            <Input label="First Name *" inputClassName="border-2" size="lg" />
-            <Input label="Last Name *" inputClassName="border-2" size="lg" />
-            <Input
-              label="Email *"
-              inputClassName="border-2"
-              size="lg"
-              className="col-span-2"
-            />
-            <Password
-              label="Password *"
-              inputClassName="border-2"
-              size="lg"
-              className="col-span-2"
-            />
-            <Password
-              label="Confirm Password *"
-              inputClassName="border-2"
-              size="lg"
-              className="col-span-2"
-            />
-            <Checkbox
-              size="lg"
-              inputClassName="border-2"
-              className="col-span-2"
-              label={
-                <Text className="text-sm">
-                  I agree to RizzUI&lsquo;s{" "}
-                  <a className="underline">Terms of Service</a> and{" "}
-                  <a className="underline">Privacy Policy</a>
-                </Text>
-              }
-            />
-            <Button
-              type="submit"
-              size="lg"
-              className="col-span-2 mt-2"
-              onClick={() => setIsOpenEditModal(false)}
-            >
-              Create an Account
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <EditProductModal
+        isOpen={isOpenEditModal}
+        onClose={handleCloseModal}
+        product={selectedProduct}
+      />
     </div>
   );
 };
