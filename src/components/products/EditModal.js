@@ -80,12 +80,6 @@ const EditProductModal = ({ isOpen, onClose, product }) => {
     }));
   };
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setSelectedFile(e.target.files[0]);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {

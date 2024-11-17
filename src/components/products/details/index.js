@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import { formatPrice } from "../../../utils/FormatPrice";
 
+import AddSkuModal from "./addSKUModal";
+
 const COLOR_MAP = {
   xám: "#808080",
   đen: "#000000",
@@ -50,6 +52,7 @@ const ProductDetails = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState({
     key: "revenue",
     direction: "desc",
@@ -122,10 +125,17 @@ const ProductDetails = () => {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 text-center">
-        {productData.product.name}
-      </h1>
-
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-2xl font-bold mb-6 text-center mx-auto">
+          {productData.product.name}
+        </h1>
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
+        >
+          Thêm SKU
+        </button>
+      </div>
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div className="bg-blue-100 p-4 rounded-lg">
           <h3 className="font-semibold">Tổng hàng tồn</h3>
@@ -198,9 +208,7 @@ const ProductDetails = () => {
           </Tab.Panel>
           <Tab.Panel className="p-4">
             <ResponsiveContainer width="100%" height={400}>
-              <PieChart
-                className="bg-gray"
-              >
+              <PieChart className="bg-gray">
                 <Pie
                   data={productData.stats.colorDistribution}
                   dataKey="value"
@@ -259,7 +267,7 @@ const ProductDetails = () => {
             <Search className="mr-2 text-gray-500 my-auto" />
             <input
               type="text"
-              placeholder="Search SKUs"
+              placeholder="Tìm kiếm SKUs"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="p-2 border border-gray-300 rounded"
@@ -371,6 +379,11 @@ const ProductDetails = () => {
           </div>
         </div>
       </div>
+      <AddSkuModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        productId={id}
+      />
     </div>
   );
 };
