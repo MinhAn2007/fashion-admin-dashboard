@@ -25,6 +25,7 @@ import {
 import { formatPrice } from "../../../utils/FormatPrice";
 
 import AddSkuModal from "./addSKUModal";
+import EditSkuModal from "./editSKUModal";
 
 const COLOR_MAP = {
   xám: "#808080",
@@ -57,6 +58,9 @@ const ProductDetails = () => {
     key: "revenue",
     direction: "desc",
   });
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedSku, setSelectedSku] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
@@ -123,6 +127,10 @@ const ProductDetails = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
+  const handleEditSku = (sku) => {
+    setSelectedSku(sku);
+    setIsEditModalOpen(true);
+  };
   return (
     <div className="p-4">
       <div className="flex justify-between items-center mb-4">
@@ -337,7 +345,7 @@ const ProductDetails = () => {
                   <td className="px-4 py-2">
                     <button
                       className="text-blue-500 p-1 mr-2"
-                      onClick={() => navigate(`/sku/${sku.id}/edit`)}
+                      onClick={() => handleEditSku(sku)}
                     >
                       <Edit2 size={16} />
                     </button>
@@ -383,6 +391,13 @@ const ProductDetails = () => {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         productId={id}
+      />
+      <EditSkuModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        productId={id}
+        skuId={selectedSku?.id}
+        initialData={selectedSku}
       />
     </div>
   );
