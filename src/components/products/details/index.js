@@ -95,8 +95,20 @@ const ProductDetails = () => {
 
   const sortProducts = (items) => {
     if (!sortConfig.key || !items) return items;
-
+    
     return [...items].sort((a, b) => {
+      if (sortConfig.key === 'deleted_at') {
+        if (a.deleted_at === null && b.deleted_at === null) return 0;
+        if (a.deleted_at === null) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (b.deleted_at === null) return sortConfig.direction === 'asc' ? 1 : -1;
+        
+        const dateA = new Date(a.deleted_at);
+        const dateB = new Date(b.deleted_at);
+        return sortConfig.direction === 'asc' 
+          ? dateA.getTime() - dateB.getTime()
+          : dateB.getTime() - dateA.getTime();
+      }
+      
       if (a[sortConfig.key] < b[sortConfig.key]) {
         return sortConfig.direction === "asc" ? -1 : 1;
       }
@@ -108,6 +120,8 @@ const ProductDetails = () => {
   };
 
   const handleSort = (key) => {
+    console.log("sort", key);
+    
     const direction =
       sortConfig.key === key && sortConfig.direction === "asc" ? "desc" : "asc";
     setSortConfig({ key, direction });
@@ -130,6 +144,21 @@ const ProductDetails = () => {
   const handleEditSku = (sku) => {
     setSelectedSku(sku);
     setIsEditModalOpen(true);
+  };
+
+  const handleDeleteSku = async (skuId) => {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/product/sku/${skuId}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to delete SKU");
+      }
+      alert("Xóa SKU thành công");
+      window.location.reload();
+    } catch (error) {
+      console.error("Error deleting SKU:", error);
+    }
   };
   return (
     <div className="p-4">
@@ -329,6 +358,12 @@ const ProductDetails = () => {
                 >
                   Doanh thu <ArrowUpDown className="inline ml-2" />
                 </th>
+                <th
+                  className="px-4 py-2 cursor-pointer"
+                  onClick={() => handleSort("deleted_at")}
+                >
+                  Trạng thái <ArrowUpDown className="inline ml-2" />
+                </th>
                 <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
@@ -343,13 +378,20 @@ const ProductDetails = () => {
                   <td className="px-4 py-2">{sku.sold_quantity}</td>
                   <td className="px-4 py-2">{formatPrice(sku.revenue)}</td>
                   <td className="px-4 py-2">
+                    {sku.deleted_at ? "Đã xóa" : "Đang hoạt động"}
+                  </td>
+
+                  <td className="px-4 py-2">
                     <button
                       className="text-blue-500 p-1 mr-2"
                       onClick={() => handleEditSku(sku)}
                     >
                       <Edit2 size={16} />
                     </button>
-                    <button className="p-1 hover:text-red-600">
+                    <button
+                      className="p-1 hover:text-red-600"
+                      onClick={() => handleDeleteSku(sku.id)}
+                    >
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
