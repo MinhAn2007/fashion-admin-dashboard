@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 import { formatPrice } from "../../utils/FormatPrice";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import EditProductModal from "./EditModal";
 const ITEMS_PER_PAGE = 10;
@@ -70,8 +70,6 @@ const ProductDashboard = () => {
   };
 
   useEffect(() => {
-
-
     fetchData();
   }, []);
 
@@ -146,7 +144,7 @@ const ProductDashboard = () => {
         alert("Xóa sản phẩm thất bại");
         throw new Error("Failed to delete product");
       }
-      alert("Xóa sản phẩm thành công"); 
+      alert("Xóa sản phẩm thành công");
       fetchData();
     } catch (error) {
       console.error("Error deleting product:", error);
@@ -173,10 +171,12 @@ const ProductDashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Quản lý Sản phẩm</h1>
-        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Thêm sản phẩm
-        </button>
+        <Link to="/new-product">
+          <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+            <Plus className="w-4 h-4 mr-2" />
+            Thêm sản phẩm
+          </button>
+        </Link>
       </div>
 
       {/* Stats */}
