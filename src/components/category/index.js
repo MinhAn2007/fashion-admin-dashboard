@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Edit2,
@@ -9,75 +9,91 @@ import {
   ArrowUpDown,
 } from "lucide-react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
   ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
+  Tooltip,
+  Legend,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Bar,
 } from "recharts";
-
-import StatsCard from "../StatsCard";
+import { formatPrice } from "../../utils/FormatPrice";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
 
+const StatsCard = ({ title, value, color }) => (
+  <div className={`${color} p-6 rounded-lg shadow-sm flex-1`}>
+    <h3 className="text-gray-600 text-sm mb-2">{title}</h3>
+    <p className="text-2xl font-bold">{value}</p>
+  </div>
+);
+
 const CategoryManagementDashboard = () => {
+  // State management
+  const [categories, setCategories] = useState([]);
+  const [stats, setStats] = useState({
+    totalCategories: 0,
+    activeCategories: 0,
+    totalProducts: 0,
+    totalRevenue: 0,
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
   const [showInactiveCategories, setShowInactiveCategories] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const API = process.env.REACT_APP_API_ENDPOINT;
+  const [chartMetric, setChartMetric] = useState("products");
 
-  // Mock data generation
-  const generateMockData = () => {
-    const categories = [];
-    const statuses = ["active", "inactive"];
-    const types = [
-      "Điện tử",
-      "Thời trang",
-      "Đồ gia dụng",
-      "Mỹ phẩm",
-      "Thực phẩm",
-    ];
-
-    for (let i = 1; i <= 50; i++) {
-      categories.push({
-        id: i,
-        name: `${types[Math.floor(Math.random() * types.length)]} ${i}`,
-        slug: `category-${i}`,
-        description: `Mô tả cho danh mục ${i}`,
-        totalProducts: Math.floor(Math.random() * 1000) + 50,
-        status: statuses[Math.floor(Math.random() * statuses.length)],
-        revenue: Math.floor(Math.random() * 1000000000) + 1000000,
-        created: new Date(
-          2023,
-          Math.floor(Math.random() * 12),
-          Math.floor(Math.random() * 28)
-        ).toLocaleDateString(),
-        parentCategory:
-          Math.random() > 0.5
-            ? `Parent ${Math.floor(Math.random() * 5) + 1}`
-            : null,
-      });
-    }
-    return categories;
+  const getAllCategoriesData = () => {
+    const filteredCategories = getFilteredCategories();
+    return filteredCategories
+      .sort((a, b) =>
+        chartMetric === "products"
+          ? b.totalProducts - a.totalProducts
+          : b.revenue - a.revenue
+      )
+      .map((category) => ({
+        name:
+          category.name.length > 30
+            ? category.name.substring(0, 30) + "..."
+            : category.name,
+        products: category.totalProducts,
+        revenue: category.revenue,
+      }));
   };
+  // Fetch data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`${API}/api/categories/dashboard`);
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const data = await response.json();
+        setCategories(data.categories.categories);
+        setIsLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setIsLoading(false);
+      }
+    };
 
-  const sampleData = {
-    categories: generateMockData(),
-  };
+    fetchData();
+  }, []);
 
-  // Sorting logic
-  const sortCategories = (categories) => {
-    if (!sortConfig.key) return categories;
-    return [...categories].sort((a, b) => {
+  // Sort categories
+  const sortCategories = (items) => {
+    if (!sortConfig.key) return items;
+
+    return [...items].sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
         return sortConfig.direction === "asc" ? -1 : 1;
       }
@@ -94,12 +110,12 @@ const CategoryManagementDashboard = () => {
     setSortConfig({ key, direction });
   };
 
-  // Filter and sort categories
-  const filteredCategories = useMemo(() => {
-    let results = sampleData.categories.filter(
+  // Filter categories and update stats
+  const getFilteredCategories = () => {
+    let results = categories.filter(
       (category) =>
         category.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        category.description.toLowerCase().includes(searchTerm.toLowerCase())
+        category.description?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     if (!showInactiveCategories) {
@@ -107,17 +123,11 @@ const CategoryManagementDashboard = () => {
     }
 
     return sortCategories(results);
-  }, [searchTerm, sortConfig, showInactiveCategories]);
+  };
 
-  // Pagination
-  const totalPages = Math.ceil(filteredCategories.length / ITEMS_PER_PAGE);
-  const paginatedCategories = filteredCategories.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
-  );
-
-  // Stats calculations
-  const stats = useMemo(() => {
+  // Update stats whenever filtered categories change
+  useEffect(() => {
+    const filteredCategories = getFilteredCategories();
     const total = filteredCategories.length;
     const active = filteredCategories.filter(
       (c) => c.status === "active"
@@ -131,13 +141,13 @@ const CategoryManagementDashboard = () => {
       0
     );
 
-    return {
+    setStats({
       totalCategories: total,
       activeCategories: active,
       totalProducts,
       totalRevenue,
-    };
-  }, [filteredCategories]);
+    });
+  }, [categories, searchTerm, showInactiveCategories, sortConfig]);
 
   // Format currency
   const formatCurrency = (value) => {
@@ -147,33 +157,34 @@ const CategoryManagementDashboard = () => {
     }).format(value);
   };
 
-  // Chart data
-  const categoryDistributionData = useMemo(() => {
+  // Prepare chart data
+  const getCategoryDistributionData = () => {
     const distribution = {};
+    const filteredCategories = getFilteredCategories();
+
     filteredCategories.forEach((category) => {
-        const type = category.name.split(/\d+/)[0].trim();      
-      if (distribution[type]) {
-        distribution[type] += category.totalProducts;
-      } else {
-        distribution[type] = category.totalProducts;
-      }
+      const type = category.name.split(/\d+/)[0].trim();
+      distribution[type] = (distribution[type] || 0) + category.totalProducts;
     });
 
-    return Object.entries(distribution).map(([name, value]) => ({
-      name,
-      value,
-    }));
-  }, [filteredCategories]);
+    return Object.entries(distribution)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10) // Chỉ lấy top 10 danh mục
+      .map(([name, value]) => ({
+        name: name.length > 15 ? name.substring(0, 15) + "..." : name,
+        value,
+      }));
+  };
 
-  const revenueByCategory = useMemo(() => {
-    return filteredCategories
+  const getRevenueByCategory = () => {
+    return getFilteredCategories()
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5)
       .map((category) => ({
         name: category.name,
         revenue: category.revenue,
       }));
-  }, [filteredCategories]);
+  };
 
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -186,6 +197,22 @@ const CategoryManagementDashboard = () => {
     }
     return null;
   };
+
+  // Pagination calculations
+  const filteredCategories = getFilteredCategories();
+  const totalPages = Math.ceil(filteredCategories.length / ITEMS_PER_PAGE);
+  const paginatedCategories = filteredCategories.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  if (isLoading) {
+    return <div className="p-6">Đang tải...</div>;
+  }
+
+  if (error) {
+    return <div className="p-6 text-red-600">Lỗi: {error}</div>;
+  }
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -203,7 +230,7 @@ const CategoryManagementDashboard = () => {
         <StatsCard
           title="Tổng danh mục"
           value={stats.totalCategories}
-          color="bg-yellow-500"
+          color="bg-yellow-100"
         />
         <StatsCard
           title="Danh mục hoạt động"
@@ -212,7 +239,7 @@ const CategoryManagementDashboard = () => {
         />
         <StatsCard
           title="Tổng sản phẩm"
-          value={stats.totalProducts}
+          value={stats.totalProducts.toLocaleString()}
           color="bg-blue-100"
         />
         <StatsCard
@@ -223,52 +250,78 @@ const CategoryManagementDashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            Phân bố sản phẩm theo danh mục
-          </h3>
-          <ResponsiveContainer width="100%" height={400}>
-            <PieChart>
-              <Pie
-                data={categoryDistributionData}
-                cx="50%"
-                cy="50%"
-                labelLine={false} // Ẩn đường kẻ nối nhãn với phần biểu đồ
-                label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
-                }
-                outerRadius={140} // Tăng kích thước outerRadius để nhãn dễ hiển thị
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {categoryDistributionData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={COLORS[index % COLORS.length]}
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
+      <div className="bg-white rounded-lg shadow-sm p-6 col-span-2">
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold">Phân bố theo danh mục</h3>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setChartMetric("products")}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                chartMetric === "products"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              Số lượng sản phẩm
+            </button>
+            <button
+              onClick={() => setChartMetric("revenue")}
+              className={`px-4 py-2 rounded-lg transition-colors ${
+                chartMetric === "revenue"
+                  ? "bg-blue-600 text-white"
+                  : "bg-gray-100 text-gray-700"
+              }`}
+            >
+              Doanh thu
+            </button>
+          </div>
         </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold mb-4">
-            Top 5 danh mục theo doanh thu
-          </h3>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={revenueByCategory}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis
-                tickFormatter={(value) => `${(value / 1000000000).toFixed(1)}B`}
+        <div className="h-[calc(100vh-400px)] min-h-[600px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart
+              data={getAllCategoriesData()}
+              margin={{ top: 20, right: 30, left: 30, bottom: 50 }}
+            >
+              <CartesianGrid />
+              <XAxis
+                dataKey="name"
+                type="category"
+                tick={{
+                  fontSize: 12,
+                  fill: "#374151",
+                }}
+                angle={-45} // Xoay tên danh mục để tránh chồng lấn
+                textAnchor="end"
               />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
-              <Bar dataKey="revenue" fill="#8884d8">
-                {revenueByCategory.map((entry, index) => (
+              <YAxis
+                type="number"
+                tickFormatter={formatPrice(chartMetric === "revenue")}
+              />
+              <Tooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const value = payload[0].value;
+                    return (
+                      <div className="bg-white p-4 shadow-lg rounded-lg border">
+                        <p className="font-semibold">
+                          {payload[0].payload.name}
+                        </p>
+                        <p>
+                          {chartMetric === "revenue"
+                            ? formatCurrency(value)
+                            : `Số lượng: ${value.toLocaleString()}`}
+                        </p>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar
+                dataKey={chartMetric === "products" ? "products" : "revenue"}
+                fill="#8884d8"
+              >
+                {getAllCategoriesData().map((entry, index) => (
                   <Cell
                     key={`cell-${index}`}
                     fill={COLORS[index % COLORS.length]}
