@@ -45,31 +45,32 @@ const ProductDashboard = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
 
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [productRes, revenueRes] = await Promise.all([
+        fetch(`${API_ENDPOINT}/api/productStats`),
+        fetch(`${API_ENDPOINT}/api/productRevenueStats`),
+      ]);
+
+      if (!productRes.ok || !revenueRes.ok) {
+        throw new Error("Failed to fetch data");
+      }
+
+      const productData = await productRes.json();
+      const revenueData = await revenueRes.json();
+
+      setProductStats(productData);
+      setRevenueStats(revenueData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const [productRes, revenueRes] = await Promise.all([
-          fetch(`${API_ENDPOINT}/api/productStats`),
-          fetch(`${API_ENDPOINT}/api/productRevenueStats`),
-        ]);
 
-        if (!productRes.ok || !revenueRes.ok) {
-          throw new Error("Failed to fetch data");
-        }
-
-        const productData = await productRes.json();
-        const revenueData = await revenueRes.json();
-
-        setProductStats(productData);
-        setRevenueStats(revenueData);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
 
     fetchData();
   }, []);
@@ -133,6 +134,23 @@ const ProductDashboard = () => {
   const handleCloseModal = () => {
     setIsOpenEditModal(false);
     setSelectedProduct(null);
+  };
+
+  const deleteProduct = async (id) => {
+    try {
+      const response = await fetch(`${API_ENDPOINT}/api/product/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        alert("Xóa sản phẩm thất bại");
+        throw new Error("Failed to delete product");
+      }
+      alert("Xóa sản phẩm thành công"); 
+      fetchData();
+    } catch (error) {
+      console.error("Error deleting product:", error);
+    }
   };
   if (loading) {
     return (
@@ -327,44 +345,61 @@ const ProductDashboard = () => {
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
                 </th>
+                <th className="p-4 text-left">
+                  <button
+                    onClick={() => handleSort("status")}
+                    className="flex items-center font-bold hover:text-blue-600"
+                  >
+                    Trạng thái
+                    <ArrowUpDown className="ml-2 h-4 w-4" />
+                  </button>
+                </th>
                 <th className="p-4 text-left">Thao tác</th>
               </tr>
             </thead>
             <tbody>
               {paginatedProducts.map((product) => (
-                  <tr key={product.id} className="border-b hover:bg-gray-50">
-                    <td className="p-4">{product.name}</td>
-                    <td
-                      className={`p-4 ${
-                        product.stock_quantity > 500
-                          ? "text-red-600 font-bold"
-                          : ""
-                      }`}
-                    >
-                      {product.stock_quantity}
-                    </td>
-                    <td className="p-4">{product.sold_quantity}</td>
-                    <td className="p-4">{formatPrice(product.revenue)}</td>
-                    <td className="p-4">
-                      <div className="flex gap-2">
-                        <button
-                          className="p-1 hover:text-blue-600"
-                          onClick={() => openEditProduct(product)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button className="p-1 hover:text-red-600">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          className="p-1 hover:text-green-600"
-                          onClick={() => navigate(`/detail/${product.id}`)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                <tr key={product.id} className="border-b hover:bg-gray-50">
+                  <td className="p-4">{product.name}</td>
+                  <td
+                    className={`p-4 ${
+                      product.stock_quantity > 500
+                        ? "text-red-600 font-bold"
+                        : ""
+                    }`}
+                  >
+                    {product.stock_quantity}
+                  </td>
+                  <td className="p-4">{product.sold_quantity}</td>
+                  <td className="p-4">{formatPrice(product.revenue)}</td>
+                  <td className="p-4">
+                    {product.status === 1
+                      ? "Đang kinh doanh"
+                      : "Ngừng kinh doanh"}
+                  </td>
+                  <td className="p-4">
+                    <div className="flex gap-2">
+                      <button
+                        className="p-1 hover:text-blue-600"
+                        onClick={() => openEditProduct(product)}
+                      >
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="p-1 hover:text-red-600"
+                        onClick={() => deleteProduct(product.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        className="p-1 hover:text-green-600"
+                        onClick={() => navigate(`/detail/${product.id}`)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               ))}
             </tbody>
           </table>
