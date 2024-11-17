@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from "react";
 
+import { useNavigate } from "react-router-dom";
+
 const AddProductForm = () => {
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState([]);
+  const navigate = useNavigate();
 
   const [product, setProduct] = useState({
     name: "",
@@ -176,7 +179,7 @@ const AddProductForm = () => {
       }
 
       alert("Thêm sản phẩm thành công");
-      
+      navigate("/product");
       // Reset form
       setProduct({
         name: "",

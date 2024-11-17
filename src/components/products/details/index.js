@@ -22,32 +22,63 @@ import {
   ChevronRight,
   Trash2,
 } from "lucide-react";
+import { formatPrice } from "../../../utils/FormatPrice";
 
+const COLOR_MAP = {
+  xám: "#808080",
+  đen: "#000000",
+  trắng: "#FFFFFF",
+  đỏ: "#FF0000",
+  vàng: "#FFFF00",
+  xanh: "#0000FF",
+  hồng: "#FFC0CB",
+  tím: "#800080",
+  cam: "#FFA500",
+  nâu: "#A52A2A",
+  "xanh lá": "#008000",
+  "xanh dương": "#00FFFF",
+};
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+
 const ITEMS_PER_PAGE = 10;
+const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
 
 const ProductDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [product, setProduct] = useState({
-    name: "Sample Product",
-    stock_quantity: 100,
-  });
-  const [skuStats, setSkuStats] = useState({
-    sizeDistribution: [],
-    colorDistribution: [],
-    salesBySize: [],
-    salesByColor: [],
-    priceDistribution: [],
-  });
+  const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [sortConfig, setSortConfig] = useState({ key: "", direction: "asc" });
+  const [sortConfig, setSortConfig] = useState({
+    key: "revenue",
+    direction: "desc",
+  });
   const [currentPage, setCurrentPage] = useState(1);
 
+  useEffect(() => {
+    const fetchProductDetails = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${API_ENDPOINT}/api/product/sku/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch product details");
+        }
+        const data = await response.json();
+        setProductData(data.skus);
+      } catch (err) {
+        setError(err.message);
+        console.error("Error fetching product details:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductDetails();
+  }, [id]);
+
   const filterProducts = (items) => {
-    if (!searchTerm.trim()) return items;
+    if (!searchTerm.trim() || !items) return items;
 
     const searchTermLower = searchTerm.toLowerCase().trim();
     return items.filter((product) =>
@@ -56,7 +87,7 @@ const ProductDetails = () => {
   };
 
   const sortProducts = (items) => {
-    if (!sortConfig.key) return items;
+    if (!sortConfig.key || !items) return items;
 
     return [...items].sort((a, b) => {
       if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -75,26 +106,13 @@ const ProductDetails = () => {
     setSortConfig({ key, direction });
   };
 
-  const mockProductData = [
-    {
-      id: "1",
-      name: "Product 1",
-      stock_quantity: 100,
-      sold_quantity: 20,
-      revenue: 5000,
-      price: 100,
-    },
-    {
-      id: "2",
-      name: "Product 2",
-      stock_quantity: 200,
-      sold_quantity: 50,
-      revenue: 10000,
-      price: 200,
-    },
-  ];
+  if (loading) return <div className="text-center py-4">Loading...</div>;
+  if (error)
+    return <div className="text-center py-4 text-red-500">{error}</div>;
+  if (!productData)
+    return <div className="text-center py-4">No data available</div>;
 
-  const filteredProducts = filterProducts(mockProductData);
+  const filteredProducts = filterProducts(productData.skuList);
   const sortedProducts = sortProducts(filteredProducts);
   const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
   const paginatedProducts = sortedProducts.slice(
@@ -102,142 +120,54 @@ const ProductDetails = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  useEffect(() => {
-    // Mock SKU data
-    const mockSkuData = [
-      {
-        size_attribute_id: "S",
-        color_attribute_id: "Red",
-        quantity: 50,
-        sold: 30,
-        price: 200,
-      },
-      {
-        size_attribute_id: "M",
-        color_attribute_id: "Blue",
-        quantity: 30,
-        sold: 20,
-        price: 250,
-      },
-      {
-        size_attribute_id: "L",
-        color_attribute_id: "Green",
-        quantity: 20,
-        sold: 10,
-        price: 300,
-      },
-    ];
-
-    const processSizeStats = (skus) => {
-      const sizeQuantity = {};
-      const sizeSales = {};
-
-      skus.forEach((sku) => {
-        if (!sizeQuantity[sku.size_attribute_id]) {
-          sizeQuantity[sku.size_attribute_id] = 0;
-          sizeSales[sku.size_attribute_id] = 0;
-        }
-        sizeQuantity[sku.size_attribute_id] += sku.quantity;
-        sizeSales[sku.size_attribute_id] += sku.sold;
-      });
-
-      return {
-        quantity: Object.entries(sizeQuantity).map(([size, value]) => ({
-          name: size,
-          value,
-        })),
-        sales: Object.entries(sizeSales).map(([size, value]) => ({
-          name: size,
-          value,
-        })),
-      };
-    };
-
-    const processColorStats = (skus) => {
-      const colorQuantity = {};
-      const colorSales = {};
-
-      skus.forEach((sku) => {
-        if (!colorQuantity[sku.color_attribute_id]) {
-          colorQuantity[sku.color_attribute_id] = 0;
-          colorSales[sku.color_attribute_id] = 0;
-        }
-        colorQuantity[sku.color_attribute_id] += sku.quantity;
-        colorSales[sku.color_attribute_id] += sku.sold;
-      });
-
-      return {
-        quantity: Object.entries(colorQuantity).map(([color, value]) => ({
-          name: color,
-          value,
-        })),
-        sales: Object.entries(colorSales).map(([color, value]) => ({
-          name: color,
-          value,
-        })),
-      };
-    };
-
-    const processPriceStats = (skus) => {
-      return skus.map((sku, index) => ({
-        name: `SKU ${index + 1}`,
-        value: sku.price,
-      }));
-    };
-
-    const sizeStats = processSizeStats(mockSkuData);
-    const colorStats = processColorStats(mockSkuData);
-    const priceStats = processPriceStats(mockSkuData);
-
-    setSkuStats({
-      sizeDistribution: sizeStats.quantity,
-      colorDistribution: colorStats.quantity,
-      salesBySize: sizeStats.sales,
-      salesByColor: colorStats.sales,
-      priceDistribution: priceStats,
-    });
-
-    setLoading(false);
-  }, [id]);
-
-  if (loading) return <div className="text-center py-4">Loading...</div>;
-  if (error)
-    return <div className="text-center py-4 text-red-500">{error}</div>;
-
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-6 text-center">{product.name}</h1>
+      <h1 className="text-2xl font-bold mb-6 text-center">
+        {productData.product.name}
+      </h1>
+
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-blue-100 p-4 rounded-lg">
+          <h3 className="font-semibold">Tổng hàng tồn</h3>
+          <p className="text-xl">{productData.product.total_stock}</p>
+        </div>
+        <div className="bg-green-100 p-4 rounded-lg">
+          <h3 className="font-semibold">Tổng đã bán</h3>
+          <p className="text-xl">{productData.product.total_sold}</p>
+        </div>
+        <div className="bg-purple-100 p-4 rounded-lg">
+          <h3 className="font-semibold">Tổng doanh thu</h3>
+          <p className="text-xl">
+            {formatPrice(productData.product.total_revenue)}
+          </p>
+        </div>
+      </div>
+
       <Tab>
         <Tab.List className="flex justify-between mb-4">
           <Tab.ListItem
             activeClassName="bg-gray-500 text-white"
             className="p-3 cursor-pointer hover:text-blue-500 transition-colors"
           >
-            Size Distribution
+            Phân bố kích thước
           </Tab.ListItem>
           <Tab.ListItem
             activeClassName="bg-gray-500 text-white"
             className="p-3 cursor-pointer hover:text-blue-500 transition-colors"
           >
-            Color Distribution
+            Phân bố màu sắc
           </Tab.ListItem>
           <Tab.ListItem
             activeClassName="bg-gray-500 text-white"
             className="p-3 cursor-pointer hover:text-blue-500 transition-colors"
           >
-            Sales by Size
+            Doanh số theo kích thước
           </Tab.ListItem>
           <Tab.ListItem
             activeClassName="bg-gray-500 text-white"
             className="p-3 cursor-pointer hover:text-blue-500 transition-colors"
           >
-            Sales by Color
-          </Tab.ListItem>
-          <Tab.ListItem
-            activeClassName="bg-gray-500 text-white"
-            className="p-3 cursor-pointer hover:text-blue-500 transition-colors"
-          >
-            Price Distribution
+            Doanh số theo màu sắc
           </Tab.ListItem>
         </Tab.List>
         <Tab.Panels>
@@ -245,7 +175,7 @@ const ProductDetails = () => {
             <ResponsiveContainer width="100%" height={400}>
               <PieChart>
                 <Pie
-                  data={skuStats.sizeDistribution}
+                  data={productData.stats.sizeDistribution}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
@@ -254,7 +184,7 @@ const ProductDetails = () => {
                   fill="#8884d8"
                   label
                 >
-                  {skuStats.sizeDistribution.map((entry, index) => (
+                  {productData.stats.sizeDistribution.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}
@@ -268,9 +198,11 @@ const ProductDetails = () => {
           </Tab.Panel>
           <Tab.Panel className="p-4">
             <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
+              <PieChart
+                className="bg-gray"
+              >
                 <Pie
-                  data={skuStats.colorDistribution}
+                  data={productData.stats.colorDistribution}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
@@ -279,10 +211,12 @@ const ProductDetails = () => {
                   fill="#82ca9d"
                   label
                 >
-                  {skuStats.colorDistribution.map((entry, index) => (
+                  {productData.stats.colorDistribution.map((entry, index) => (
                     <Cell
-                      key={`cell-${index}`}
-                      fill={COLORS[index % COLORS.length]}
+                      stroke="#333333" // Thêm viền màu đậm
+                      strokeWidth={1} // Độ dày của viền
+                      key={`cell-${entry.name}`}
+                      fill={COLOR_MAP[entry.name.toLowerCase()] || "#CCCCCC"} // fallback to gray if color not found
                     />
                   ))}
                 </Pie>
@@ -293,7 +227,7 @@ const ProductDetails = () => {
           </Tab.Panel>
           <Tab.Panel className="p-4">
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={skuStats.salesBySize}>
+              <BarChart data={productData.stats.salesBySize}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -305,19 +239,7 @@ const ProductDetails = () => {
           </Tab.Panel>
           <Tab.Panel className="p-4">
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={skuStats.salesByColor}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="value" fill="#82ca9d" />
-              </BarChart>
-            </ResponsiveContainer>
-          </Tab.Panel>
-          <Tab.Panel className="p-4">
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={skuStats.priceDistribution}>
+              <BarChart data={productData.stats.salesByColor}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="name" />
                 <YAxis />
@@ -329,31 +251,30 @@ const ProductDetails = () => {
           </Tab.Panel>
         </Tab.Panels>
       </Tab>
+
       <div className="mt-6">
         <div className="flex justify-between mb-4">
-          <h2 className="text-xl font-bold mb-4">SKU List</h2>
+          <h2 className="text-xl font-bold">SKU List</h2>
           <div className="flex">
             <Search className="mr-2 text-gray-500 my-auto" />
             <input
               type="text"
-              placeholder="Search Products"
+              placeholder="Search SKUs"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="p-2 border border-gray-300 rounded"
             />
           </div>
         </div>
-        <div className="bg-white shadow-lg rounded-lg p-4 ">
-          <div className="flex items-center mb-4 "></div>
+        <div className="bg-white shadow-lg rounded-lg p-4">
           <table className="min-w-full">
-            <thead className="bg-gray-100 text-left mx-auto">
+            <thead className="bg-gray-100 text-left">
               <tr>
                 <th
                   className="px-4 py-2 cursor-pointer"
                   onClick={() => handleSort("name")}
                 >
-                  SKU
-                  <ArrowUpDown className="inline ml-2" />
+                  SKU <ArrowUpDown className="inline ml-2" />
                 </th>
                 <th
                   className="px-4 py-2 cursor-pointer"
@@ -361,43 +282,54 @@ const ProductDetails = () => {
                 >
                   Giá
                   <ArrowUpDown className="inline ml-2" />
+                </th>{" "}
+                <th
+                  className="px-4 py-2 cursor-pointer"
+                  onClick={() => handleSort("price")}
+                >
+                  Màu <ArrowUpDown className="inline ml-2" />
                 </th>
                 <th
                   className="px-4 py-2 cursor-pointer"
                   onClick={() => handleSort("stock_quantity")}
                 >
-                  Stock Quantity
-                  <ArrowUpDown className="inline ml-2" />
+                  Size <ArrowUpDown className="inline ml-2" />
                 </th>
                 <th
                   className="px-4 py-2 cursor-pointer"
                   onClick={() => handleSort("sold_quantity")}
                 >
-                  Sold Quantity
-                  <ArrowUpDown className="inline ml-2" />
+                  Hàng tồn <ArrowUpDown className="inline ml-2" />
+                </th>
+                <th
+                  className="px-4 py-2 cursor-pointer"
+                  onClick={() => handleSort("sold_quantity")}
+                >
+                  Đã bán <ArrowUpDown className="inline ml-2" />
                 </th>
                 <th
                   className="px-4 py-2 cursor-pointer"
                   onClick={() => handleSort("revenue")}
                 >
-                  Revenue
-                  <ArrowUpDown className="inline ml-2" />
+                  Doanh thu <ArrowUpDown className="inline ml-2" />
                 </th>
                 <th className="px-4 py-2">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedProducts.map((product) => (
-                <tr key={product.id}>
-                  <td className="px-4 py-2">{product.name}</td>
-                  <td className="px-4 py-2">{product.price}</td>
-                  <td className="px-4 py-2">{product.stock_quantity}</td>
-                  <td className="px-4 py-2">{product.sold_quantity}</td>
-                  <td className="px-4 py-2">{product.revenue}</td>
+              {paginatedProducts.map((sku) => (
+                <tr key={sku.id}>
+                  <td className="px-4 py-2">{sku.name}</td>
+                  <td className="px-4 py-2">{formatPrice(sku.price)}</td>
+                  <td className="px-4 py-2">{sku.color}</td>
+                  <td className="px-4 py-2">{sku.size}</td>
+                  <td className="px-4 py-2">{sku.stock_quantity}</td>
+                  <td className="px-4 py-2">{sku.sold_quantity}</td>
+                  <td className="px-4 py-2">{formatPrice(sku.revenue)}</td>
                   <td className="px-4 py-2">
                     <button
                       className="text-blue-500 p-1 mr-2"
-                      onClick={() => navigate(`/product/${product.id}/edit`)}
+                      onClick={() => navigate(`/sku/${sku.id}/edit`)}
                     >
                       <Edit2 size={16} />
                     </button>
@@ -412,9 +344,9 @@ const ProductDetails = () => {
         </div>
         <div className="p-4 flex items-center justify-between border-t">
           <div className="text-sm text-gray-500">
-            Hiển thị {(currentPage - 1) * ITEMS_PER_PAGE + 1} đến{" "}
+            Xem {(currentPage - 1) * ITEMS_PER_PAGE + 1} tới{" "}
             {Math.min(currentPage * ITEMS_PER_PAGE, sortedProducts.length)}{" "}
-            trong số {sortedProducts.length} sản phẩm
+            trong {sortedProducts.length} SKUs
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -437,7 +369,7 @@ const ProductDetails = () => {
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
-        </div>{" "}
+        </div>
       </div>
     </div>
   );
