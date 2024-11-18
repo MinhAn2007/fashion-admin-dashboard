@@ -450,12 +450,6 @@ const OrderManagementDashboard = () => {
                     </td>
                     <td className="p-4">
                       <div className="flex space-x-4">
-                        <button className="text-blue-600 hover:text-blue-800">
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button className="text-red-600 hover:text-red-800">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                         <Link to={`/order-detail/${order.id}`}>
                           <button className="text-green-600 hover:text-green-800">
                             <Eye className="h-4 w-4" />
