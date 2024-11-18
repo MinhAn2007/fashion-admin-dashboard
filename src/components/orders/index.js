@@ -1,5 +1,12 @@
-import React, { useState, useMemo } from "react";
-import { Plus, Edit2, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+} from "lucide-react";
 import StatsCard from "../StatsCard";
 import {
   LineChart,
@@ -8,21 +15,45 @@ import {
   YAxis,
   Tooltip,
   Legend,
+  CartesianGrid,
   ResponsiveContainer,
   Cell,
+  ComposedChart,
 } from "recharts";
 import { BarChart, Bar, PieChart, Pie } from "recharts";
 import { formatPrice } from "../../utils/FormatPrice";
-import { ArrowUpDown } from "lucide-react";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
+
+const STATUS_DISPLAY_MAP = {
+  "Pending Confirmation": "Chờ xác nhận",
+  "In Transit": "Đang giao hàng",
+  Cancelled: "Đã hủy",
+  Completed: "Hoàn thành",
+  Delivered: "Đã giao hàng",
+  Returned: "Đã trả hàng",
+};
+
 const STATUS_COLORS = {
-  "Pending Confirmation": "bg-yellow-100 text-yellow-800",
-  Processing: "bg-blue-100 text-blue-800",
-  Shipped: "bg-indigo-100 text-indigo-800",
-  Delivered: "bg-green-100 text-green-800",
-  Returned: "bg-red-100 text-red-800",
+  "Pending Confirmation": "bg-yellow-100",
+  "In Transit": "bg-blue-100",
+  Cancelled: "bg-red-100",
+  Completed: "bg-green-100",
+  Delivered: "bg-green-100",
+  Returned: "bg-red-100",
+};
+
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-4 shadow-lg rounded-lg border">
+        <p className="font-semibold">{payload[0].name}</p>
+        <p>{`${payload[0].value}%`}</p>
+      </div>
+    );
+  }
+  return null;
 };
 
 const OrderManagementDashboard = () => {
@@ -30,35 +61,30 @@ const OrderManagementDashboard = () => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
   const [showNeedAttention, setShowNeedAttention] = useState(false);
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const API = process.env.REACT_APP_API_ENDPOINT;
 
-  // Mock data generation remains the same
-  const generateMockData = () => {
-    const orders = [];
-    for (let i = 1; i <= 100; i++) {
-      orders.push({
-        id: i,
-        customerName: `Khách hàng ${i}`,
-        status: [
-          "Pending Confirmation",
-          "Processing",
-          "Shipped",
-          "Delivered",
-          "Returned",
-        ][Math.floor(Math.random() * 5)],
-        total: Math.floor(Math.random() * 1000000) + 100000,
-        createdAt: new Date(
-          2023,
-          Math.floor(Math.random() * 12),
-          Math.floor(Math.random() * 28)
-        ).toLocaleDateString(),
-      });
-    }
-    return orders;
-  };
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(`${API}/api/orders/dashboard`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch dashboard data");
+        }
+        const data = await response.json();
+        setDashboardData(data.data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const sampleData = {
-    orders: generateMockData(),
-  };
+    fetchDashboardData();
+  }, []);
 
   const sortOrders = (orders) => {
     if (!sortConfig.key) return orders;
@@ -79,97 +105,79 @@ const OrderManagementDashboard = () => {
     setSortConfig({ key, direction });
   };
 
-  // Filter and sort orders
   const filteredOrders = useMemo(() => {
+    if (!dashboardData?.orders) return [];
+
     let orders = sortOrders(
-      sampleData.orders.filter(
+      dashboardData.orders.filter(
         (order) =>
           order.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.status.toLowerCase().includes(searchTerm.toLowerCase())
+          (STATUS_DISPLAY_MAP[order.status] || order.status)
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          order.id.toString().includes(searchTerm.toLowerCase())
       )
     );
 
     if (showNeedAttention) {
+      console.log(orders);
+
       orders = orders.filter(
         (order) =>
           order.status === "Returned" || order.status === "Pending Confirmation"
       );
     }
+    console.log("orders", orders);
 
     return orders;
-  }, [searchTerm, sortConfig, showNeedAttention]);
+  }, [dashboardData?.orders, searchTerm, sortConfig, showNeedAttention]);
 
-  // Pagination
+  const processedData = useMemo(() => {
+    if (!dashboardData?.monthlyRevenue) return [];
+    return dashboardData.monthlyRevenue.map((item, index) => {
+      if (index === 0) return { ...item, growth: 0 };
+      const prevRevenue = dashboardData.monthlyRevenue[index - 1].total_revenue;
+      const growth = ((item.total_revenue - prevRevenue) / prevRevenue) * 100;
+      return { ...item, growth };
+    });
+  }, [dashboardData?.monthlyRevenue]);
+
   const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
   const paginatedOrders = filteredOrders.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  // Order status statistics
+  console.log("Paginated Orders", paginatedOrders);
+
   const orderStatusStats = useMemo(() => {
+    if (!filteredOrders.length) return [];
     const stats = {};
     filteredOrders.forEach((order) => {
-      if (!stats[order.status]) {
-        stats[order.status] = 0;
+      const displayStatus = STATUS_DISPLAY_MAP[order.status] || order.status;
+      if (!stats[displayStatus]) {
+        stats[displayStatus] = 0;
       }
-      stats[order.status]++;
+      stats[displayStatus]++;
     });
     return Object.entries(stats).map(([status, count]) => ({ status, count }));
   }, [filteredOrders]);
 
-  // Payment method data for pie chart
-  const paymentData = [
-    { name: "Thanh toán Online", value: 60, color: "#0088FE" },
-    { name: "Tiền mặt", value: 40, color: "#00C49F" },
-  ];
-  const returnRate = useMemo(() => {
-    const returnedOrders = filteredOrders.filter(
-      (order) => order.status === "Returned"
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Đang tải dữ liệu...</div>
+      </div>
     );
-    return ((returnedOrders.length / filteredOrders.length) * 100).toFixed(2);
-  }, [filteredOrders]);
+  }
 
-  // Format functions remain the same
-  const formatValue = (value) => {
-    if (value >= 1000000000) {
-      return `${(value / 1000000000).toFixed(1)}B`;
-    }
-    if (value >= 1000000) {
-      return `${(value / 1000000).toFixed(1)}M`;
-    }
-    if (value >= 1000) {
-      return `${(value / 1000).toFixed(1)}K`;
-    }
-    return value.toLocaleString();
-  };
-
-  // Revenue over time calculation remains the same
-  const revenueOverTime = useMemo(() => {
-    const data = [];
-    for (let i = 0; i < 12; i++) {
-      const month = new Date(2023, i).toLocaleString("default", {
-        month: "long",
-      });
-      const revenue = sampleData.orders
-        .filter((order) => new Date(order.createdAt).getMonth() === i)
-        .reduce((total, order) => total + order.total, 0);
-      data.push({ month, revenue });
-    }
-    return data;
-  }, []);
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 shadow-lg rounded-lg border">
-          <p className="font-semibold">{payload[0].name}</p>
-          <p>{`${payload[0].value}%`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-red-600">Lỗi: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -186,69 +194,115 @@ const OrderManagementDashboard = () => {
       <div className="flex justify-between gap-10">
         <StatsCard
           title="Tổng doanh thu"
-          value={`${formatValue(
-            filteredOrders.reduce((total, order) => total + order.total, 0)
-          )}đ`}
+          value={`${formatPrice(dashboardData.stats.totalRevenue)}`}
           color="bg-yellow-100"
         />
         <StatsCard
           title="Tỷ lệ hoàn trả"
-          value={`${returnRate}%`}
+          value={`${dashboardData.stats.returnRate}%`}
           color="bg-red-100"
         />
         <StatsCard
           title="Đơn hàng chờ xác nhận"
-          value={`${
-            orderStatusStats.find(
-              (item) => item.status === "Pending Confirmation"
-            )?.count || 0
-          }`}
+          value={dashboardData.stats.pendingOrders}
           color="bg-red-100"
         />
         <StatsCard
           title="Tổng đơn hàng"
-          value={`${filteredOrders.length.toLocaleString()}`}
+          value={dashboardData.stats.totalOrders}
           color="bg-green-100"
         />
       </div>
 
-      {/* Charts Section */}
+      {/* Revenue Chart Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold mb-4">Doanh thu theo thời gian</h3>
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={revenueOverTime}>
-            <XAxis dataKey="month" />
-            <YAxis tickFormatter={(value) => `${formatPrice(value)}`} />
-            <Tooltip formatter={(value) => `${formatPrice(value)}`} />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="revenue"
-              stroke="#8884d8"
-              strokeWidth={2}
+          <ComposedChart
+            data={processedData}
+            margin={{ top: 20, right: 30, left: 50, bottom: 20 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              opacity={0.2}
+              vertical={false}
             />
-          </LineChart>
+            <XAxis
+              dataKey="month"
+              axisLine={{ stroke: "#E5E7EB" }}
+              tick={{ fill: "#6B7280", fontSize: 12 }}
+              tickLine={false}
+            />
+            <YAxis
+              yAxisId="left"
+              axisLine={{ stroke: "#E5E7EB" }}
+              tick={{ fill: "#6B7280", fontSize: 12 }}
+              tickLine={false}
+              tickFormatter={(value) => formatPrice(value)}
+            />
+            <YAxis
+              yAxisId="right"
+              orientation="right"
+              axisLine={{ stroke: "#E5E7EB" }}
+              tick={{ fill: "#6B7280", fontSize: 12 }}
+              tickLine={false}
+              tickFormatter={(value) => `${value.toFixed(1)}%`}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "white",
+                border: "none",
+                borderRadius: "6px",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+              formatter={(value, name) => {
+                if (name === "Doanh thu") return formatPrice(value);
+                if (name === "% Tăng trưởng") return `${value.toFixed(1)}%`;
+                return value;
+              }}
+            />
+            <Legend />
+            <Bar
+              yAxisId="left"
+              dataKey="total_revenue"
+              name="Doanh thu"
+              fill="#2563eb"
+              barSize={40}
+            />
+            <Line
+              yAxisId="right"
+              type="monotone"
+              dataKey="growth"
+              name="% Tăng trưởng"
+              stroke="#10b981"
+              strokeWidth={2}
+              dot={{ fill: "#10b981", strokeWidth: 2 }}
+            />
+          </ComposedChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Charts Section */}
       <div className="flex justify-between gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6 flex-1">
           <h3 className="text-lg font-semibold mb-4">Phương thức thanh toán</h3>
           <ResponsiveContainer width="100%" height={400}>
             <PieChart>
               <Pie
-                data={paymentData}
+                data={dashboardData.paymentStats}
                 cx="50%"
                 cy="50%"
                 labelLine={true}
-                label={({ name, percent }) =>
-                  `${name}: ${(percent * 100).toFixed(0)}%`
-                }
+                label={({ name, value }) => `${name}: ${value}%`}
                 outerRadius={120}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {paymentData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                {dashboardData.paymentStats.map((entry, index) => (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
@@ -257,7 +311,6 @@ const OrderManagementDashboard = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Orders Table Section */}
         <div className="bg-white rounded-lg shadow-sm p-6 flex-1">
           <h3 className="text-lg font-semibold mb-4">
             Phân bố trạng thái đơn hàng
@@ -270,14 +323,18 @@ const OrderManagementDashboard = () => {
               <Legend />
               <Bar dataKey="count" fill="#8884d8">
                 {orderStatusStats.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={COLORS[index % COLORS.length]}
+                  />
                 ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
-      {/* Orders Needing Attention */}
+
+      {/* Orders Table Section */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="p-6 border-b">
           <div className="flex justify-between items-center mb-4">
@@ -309,9 +366,18 @@ const OrderManagementDashboard = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
+                <th className="p-4 text-left">
+                    <button
+                      onClick={() => handleSort("id")}
+                      className="flex items-center font-bold hover:text-blue-600"
+                    >
+                      Mã đơn hàng
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </button>
+                  </th>
                   <th className="p-4 text-left">
                     <button
-                      onClick={() => handleSort("customer")}
+                      onClick={() => handleSort("customerName")}
                       className="flex items-center font-bold hover:text-blue-600"
                     >
                       Khách hàng
@@ -351,6 +417,7 @@ const OrderManagementDashboard = () => {
               <tbody>
                 {paginatedOrders.map((order) => (
                   <tr key={order.id} className="border-b hover:bg-gray-50">
+                    <td className="p-4">{order.id}</td>
                     <td className="p-4">{order.customerName}</td>
                     <td className="p-4">
                       <span
@@ -358,11 +425,13 @@ const OrderManagementDashboard = () => {
                           STATUS_COLORS[order.status]
                         }`}
                       >
-                        {order.status}
+                        {STATUS_DISPLAY_MAP[order.status] || order.status}
                       </span>
                     </td>
-                    <td className="p-4">{formatValue(order.total)}đ</td>
-                    <td className="p-4">{order.createdAt}</td>
+                    <td className="p-4">{formatPrice(order.total)}</td>
+                    <td className="p-4">
+                      {new Date(order.createdAt).toLocaleDateString()}
+                    </td>
                     <td className="p-4">
                       <div className="flex space-x-4">
                         <button className="text-blue-600 hover:text-blue-800">
