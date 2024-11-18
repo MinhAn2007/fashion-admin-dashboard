@@ -10,11 +10,8 @@ import {
 } from "lucide-react";
 import {
   ResponsiveContainer,
-  PieChart,
-  Pie,
   Cell,
   Tooltip,
-  Legend,
   BarChart,
   CartesianGrid,
   XAxis,
@@ -23,7 +20,7 @@ import {
 } from "recharts";
 import { formatPrice } from "../../utils/FormatPrice";
 import AddCategoryModal from "./addCategoryModal";
-import EditCategoryModal from './editCategoryModal';
+import EditCategoryModal from "./editCategoryModal";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -54,7 +51,7 @@ const CategoryManagementDashboard = () => {
   const [chartMetric, setChartMetric] = useState("products");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   const getAllCategoriesData = () => {
     const filteredCategories = getFilteredCategories();
@@ -153,6 +150,22 @@ const [selectedCategory, setSelectedCategory] = useState(null);
       totalRevenue,
     });
   }, [categories, searchTerm, showInactiveCategories, sortConfig]);
+
+  const deleteCategory = async (id) => {
+    try {
+      const response = await fetch(`${API}/api/categories/${id}`, {
+        method: "DELETE",
+      });
+      if (!response.ok) {
+        alert("Xóa danh mục thất bại");
+        throw new Error("Network response was not ok");
+      }
+      alert("Xóa danh mục thành công");
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // Format currency
   const formatCurrency = (value) => {
@@ -395,16 +408,19 @@ const [selectedCategory, setSelectedCategory] = useState(null);
                     <td className="p-4">{category.created}</td>
                     <td className="p-4">
                       <div className="flex space-x-4">
-                      <button 
-  className="text-blue-600 hover:text-blue-800"
-  onClick={() => {
-    setSelectedCategory(category);
-    setIsEditModalOpen(true);
-  }}
->
-  <Edit2 className="h-4 w-4" />
-</button>
-                        <button className="text-red-600 hover:text-red-800">
+                        <button
+                          className="text-blue-600 hover:text-blue-800"
+                          onClick={() => {
+                            setSelectedCategory(category);
+                            setIsEditModalOpen(true);
+                          }}
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-800"
+                          onClick={() => deleteCategory(category.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </div>
