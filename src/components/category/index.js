@@ -23,6 +23,7 @@ import {
 } from "recharts";
 import { formatPrice } from "../../utils/FormatPrice";
 import AddCategoryModal from "./addCategoryModal";
+import EditCategoryModal from './editCategoryModal';
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -52,6 +53,8 @@ const CategoryManagementDashboard = () => {
   const API = process.env.REACT_APP_API_ENDPOINT;
   const [chartMetric, setChartMetric] = useState("products");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+const [selectedCategory, setSelectedCategory] = useState(null);
 
   const getAllCategoriesData = () => {
     const filteredCategories = getFilteredCategories();
@@ -180,7 +183,8 @@ const CategoryManagementDashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Quản lý Danh mục</h1>
-        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+        <button
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
           onClick={() => setIsAddModalOpen(true)}
         >
           <Plus className="w-4 h-4 mr-2" />
@@ -391,9 +395,15 @@ const CategoryManagementDashboard = () => {
                     <td className="p-4">{category.created}</td>
                     <td className="p-4">
                       <div className="flex space-x-4">
-                        <button className="text-blue-600 hover:text-blue-800">
-                          <Edit2 className="h-4 w-4" />
-                        </button>
+                      <button 
+  className="text-blue-600 hover:text-blue-800"
+  onClick={() => {
+    setSelectedCategory(category);
+    setIsEditModalOpen(true);
+  }}
+>
+  <Edit2 className="h-4 w-4" />
+</button>
                         <button className="text-red-600 hover:text-red-800">
                           <Trash2 className="h-4 w-4" />
                         </button>
@@ -435,10 +445,18 @@ const CategoryManagementDashboard = () => {
           </div>
         </div>
       </div>
-      <AddCategoryModal 
-  isOpen={isAddModalOpen} 
-  onClose={() => setIsAddModalOpen(false)} 
-/>
+      <AddCategoryModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
+      <EditCategoryModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedCategory(null);
+        }}
+        category={selectedCategory}
+      />
     </div>
   );
 };
