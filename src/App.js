@@ -16,6 +16,7 @@ import ReviewDashboard from "./components/review/ReviewDashboard";
 import AdminLogin from "./components/admin/AdminLogin"; 
 import ProductDetails from "./components/products/details/index";
 import AddProductForm from "./components/products/NewProduct";
+import OrderDetail from "./components/orders/details";
 
 // Component bảo vệ các route cần đăng nhập
 const ProtectedRoute = ({ element }) => {
@@ -49,6 +50,8 @@ function App() {
                         <Route path="/new-product" element={<AddProductForm />} />
                         <Route path="/customers" element={<CustomerDashboard />} />
                         <Route path="/order" element={<OrderManagementDashboard />} />
+                        <Route path="/order-detail/:id" element={<OrderDetail />} />
+
                         <Route path="/category" element={<CategoryManagementDashboard />} />
                         <Route path="/reviews" element={<ReviewDashboard />} />
                       </Routes>

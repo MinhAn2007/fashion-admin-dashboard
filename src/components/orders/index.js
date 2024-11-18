@@ -6,10 +6,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
+  Eye,
 } from "lucide-react";
 import StatsCard from "../StatsCard";
 import {
-  LineChart,
   Line,
   XAxis,
   YAxis,
@@ -22,6 +22,7 @@ import {
 } from "recharts";
 import { BarChart, Bar, PieChart, Pie } from "recharts";
 import { formatPrice } from "../../utils/FormatPrice";
+import { Link } from "react-router-dom";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -366,7 +367,7 @@ const OrderManagementDashboard = () => {
             <table className="w-full">
               <thead>
                 <tr className="bg-gray-50">
-                <th className="p-4 text-left">
+                  <th className="p-4 text-left">
                     <button
                       onClick={() => handleSort("id")}
                       className="flex items-center font-bold hover:text-blue-600"
@@ -440,6 +441,11 @@ const OrderManagementDashboard = () => {
                         <button className="text-red-600 hover:text-red-800">
                           <Trash2 className="h-4 w-4" />
                         </button>
+                        <Link to={`/order-detail/${order.id}`}>
+                          <button className="text-green-600 hover:text-green-800">
+                            <Eye className="h-4 w-4" />
+                          </button>
+                        </Link>
                       </div>
                     </td>
                   </tr>
