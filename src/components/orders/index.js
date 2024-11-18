@@ -23,6 +23,7 @@ import {
 import { BarChart, Bar, PieChart, Pie } from "recharts";
 import { formatPrice } from "../../utils/FormatPrice";
 import { Link } from "react-router-dom";
+import OrderDashboardFilter from "../../utils/Filter";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -133,6 +134,24 @@ const OrderManagementDashboard = () => {
     return orders;
   }, [dashboardData?.orders, searchTerm, sortConfig, showNeedAttention]);
 
+  const fetchDashboardData = async (startDate, endDate) => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${API}/api/orders/dashboard?startDate=${startDate}&endDate=${endDate}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard data");
+      }
+      const data = await response.json();
+      setDashboardData(data.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const processedData = useMemo(() => {
     if (!dashboardData?.monthlyRevenue) return [];
     return dashboardData.monthlyRevenue.map((item, index) => {
@@ -182,15 +201,14 @@ const OrderManagementDashboard = () => {
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header */}
       <div className="flex justify-between items-center">
+        <OrderDashboardFilter
+          onDateRangeChange={({ startDate, endDate }) =>
+            fetchDashboardData(startDate, endDate)
+          }
+        />
         <h1 className="text-2xl font-bold">Quản lý Đơn hàng</h1>
-        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Tạo đơn hàng mới
-        </button>
       </div>
-
       {/* Stats Cards */}
       <div className="flex justify-between gap-10">
         <StatsCard
@@ -214,7 +232,6 @@ const OrderManagementDashboard = () => {
           color="bg-green-100"
         />
       </div>
-
       {/* Revenue Chart Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
         <h3 className="text-lg font-semibold mb-4">Doanh thu theo thời gian</h3>
@@ -282,7 +299,6 @@ const OrderManagementDashboard = () => {
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-
       {/* Charts Section */}
       <div className="flex justify-between gap-6">
         <div className="bg-white rounded-lg shadow-sm p-6 flex-1">
@@ -334,7 +350,6 @@ const OrderManagementDashboard = () => {
           </ResponsiveContainer>
         </div>
       </div>
-
       {/* Orders Table Section */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="p-6 border-b">
