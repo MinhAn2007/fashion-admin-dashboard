@@ -44,6 +44,7 @@ const OrderDetail = () => {
   const [error, setError] = useState(null);
   const API = process.env.REACT_APP_API_ENDPOINT;
   const navigate = useNavigate();
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
   useEffect(() => {
     const fetchOrderDetail = async () => {
@@ -69,6 +70,8 @@ const OrderDetail = () => {
 
   const handleStatusUpdate = async (newStatus) => {
     try {
+      setIsUpdatingStatus(true);
+
       const response = await fetch(`${API}/api/orders/${id}`, {
         method: "PUT",
         headers: {
@@ -114,47 +117,132 @@ const OrderDetail = () => {
       <div className="flex gap-2">
         {actions.includes("confirm") && (
           <button
-            onClick={() => handleStatusUpdate("In Transit")}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            onClick={() => handleStatusUpdate(order.status === "Returned" ? "In Transit" : "In Transit")}
+            disabled={isUpdatingStatus}
+            className={`flex items-center px-4 py-2 text-white rounded-lg ${
+              isUpdatingStatus 
+                ? "bg-green-400 cursor-not-allowed" 
+                : "bg-green-600 hover:bg-green-700"
+            }`}
           >
-            <CheckCircle className="w-4 h-4 mr-2" />
-            {order.status === "Returned" ? "Xác nhận trả hàng" : "Xác nhận đơn hàng"}
+            {isUpdatingStatus ? (
+              <div className="flex items-center">
+                <svg className="animate-spin h-4 w-4 mr-2 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Đang xử lý...
+              </div>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {order.status === "Returned" ? "Xác nhận trả hàng" : "Xác nhận đơn hàng"}
+              </>
+            )}
           </button>
         )}
         {actions.includes("cancel") && (
           <button
             onClick={() => handleStatusUpdate("Cancelled")}
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            disabled={isUpdatingStatus}
+            className={`flex items-center px-4 py-2 text-white rounded-lg ${
+              isUpdatingStatus 
+                ? "bg-red-400 cursor-not-allowed" 
+                : "bg-red-600 hover:bg-red-700"
+            }`}
           >
-            <XCircle className="w-4 h-4 mr-2" />
-            Hủy đơn hàng
+            {isUpdatingStatus ? (
+              <div className="flex items-center">
+                <svg className="animate-spin h-4 w-4 mr-2 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Đang xử lý...
+              </div>
+            ) : (
+              <>
+                <XCircle className="w-4 h-4 mr-2" />
+                Hủy đơn hàng
+              </>
+            )}
           </button>
         )}
         {actions.includes("deliver") && (
           <button
             onClick={() => handleStatusUpdate("Delivered")}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            disabled={isUpdatingStatus}
+            className={`flex items-center px-4 py-2 text-white rounded-lg ${
+              isUpdatingStatus 
+                ? "bg-blue-400 cursor-not-allowed" 
+                : "bg-blue-600 hover:bg-blue-700"
+            }`}
           >
-            <TruckIcon className="w-4 h-4 mr-2" />
-            Xác nhận đã giao
+            {isUpdatingStatus ? (
+              <div className="flex items-center">
+                <svg className="animate-spin h-4 w-4 mr-2 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Đang xử lý...
+              </div>
+            ) : (
+              <>
+                <TruckIcon className="w-4 h-4 mr-2" />
+                Xác nhận đã giao
+              </>
+            )}
           </button>
         )}
         {actions.includes("complete") && (
           <button
             onClick={() => handleStatusUpdate("Completed")}
-            className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            disabled={isUpdatingStatus}
+            className={`flex items-center px-4 py-2 text-white rounded-lg ${
+              isUpdatingStatus 
+                ? "bg-green-400 cursor-not-allowed" 
+                : "bg-green-600 hover:bg-green-700"
+            }`}
           >
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Hoàn thành
+            {isUpdatingStatus ? (
+              <div className="flex items-center">
+                <svg className="animate-spin h-4 w-4 mr-2 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Đang xử lý...
+              </div>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Hoàn thành
+              </>
+            )}
           </button>
         )}
         {actions.includes("return") && (
           <button
             onClick={() => handleStatusUpdate("Returned")}
-            className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            disabled={isUpdatingStatus}
+            className={`flex items-center px-4 py-2 text-white rounded-lg ${
+              isUpdatingStatus 
+                ? "bg-red-400 cursor-not-allowed" 
+                : "bg-red-600 hover:bg-red-700"
+            }`}
           >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Hoàn trả
+            {isUpdatingStatus ? (
+              <div className="flex items-center">
+                <svg className="animate-spin h-4 w-4 mr-2 text-white" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Đang xử lý...
+              </div>
+            ) : (
+              <>
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Hoàn trả
+              </>
+            )}
           </button>
         )}
       </div>
@@ -195,15 +283,20 @@ const OrderDetail = () => {
           </div>
         </div>
         <div className="flex items-center justify-between">
-          <span className={`px-3 py-1 rounded-full text-sm ${STATUS_COLORS[order.status]}`}>
+          <span
+            className={`px-3 py-1 rounded-full text-sm ${
+              STATUS_COLORS[order.status]
+            }`}
+          >
             {STATUS_DISPLAY_MAP[order.status]}
           </span>
           <div className="text-right">
             <p className="text-sm text-gray-500">Cập nhật lần cuối:</p>
-            <p className="font-medium">{new Date(order.updatedAt).toLocaleString()}</p>            
+            <p className="font-medium">
+              {new Date(order.updatedAt).toLocaleString()}
+            </p>
           </div>
         </div>
-      
       </div>
 
       {/* Customer Info & Shipping */}
@@ -248,6 +341,20 @@ const OrderDetail = () => {
             </p>
           </div>
         </div>
+        {(order.status === "Cancelled" || order.status === "Returned") && (
+          <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold mb-4">
+              {order.status === "Cancelled"
+                ? "Lý do hủy đơn"
+                : "Lý do trả hàng"}
+            </h2>
+            <p className="text-gray-700">
+              {order.status === "Cancelled"
+                ? order.cancelReason || "Không có lý do cụ thể"
+                : order.returnReason || "Không có lý do cụ thể"}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Order Items */}
