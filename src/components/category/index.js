@@ -22,6 +22,7 @@ import {
   Bar,
 } from "recharts";
 import { formatPrice } from "../../utils/FormatPrice";
+import AddCategoryModal from "./addCategoryModal";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -50,6 +51,7 @@ const CategoryManagementDashboard = () => {
   const [error, setError] = useState(null);
   const API = process.env.REACT_APP_API_ENDPOINT;
   const [chartMetric, setChartMetric] = useState("products");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const getAllCategoriesData = () => {
     const filteredCategories = getFilteredCategories();
@@ -157,47 +159,6 @@ const CategoryManagementDashboard = () => {
     }).format(value);
   };
 
-  // Prepare chart data
-  const getCategoryDistributionData = () => {
-    const distribution = {};
-    const filteredCategories = getFilteredCategories();
-
-    filteredCategories.forEach((category) => {
-      const type = category.name.split(/\d+/)[0].trim();
-      distribution[type] = (distribution[type] || 0) + category.totalProducts;
-    });
-
-    return Object.entries(distribution)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 10) // Chỉ lấy top 10 danh mục
-      .map(([name, value]) => ({
-        name: name.length > 15 ? name.substring(0, 15) + "..." : name,
-        value,
-      }));
-  };
-
-  const getRevenueByCategory = () => {
-    return getFilteredCategories()
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5)
-      .map((category) => ({
-        name: category.name,
-        revenue: category.revenue,
-      }));
-  };
-
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white p-4 shadow-lg rounded-lg border">
-          <p className="font-semibold">{payload[0].name}</p>
-          <p>{`Số lượng: ${payload[0].value.toLocaleString()}`}</p>
-        </div>
-      );
-    }
-    return null;
-  };
-
   // Pagination calculations
   const filteredCategories = getFilteredCategories();
   const totalPages = Math.ceil(filteredCategories.length / ITEMS_PER_PAGE);
@@ -219,7 +180,9 @@ const CategoryManagementDashboard = () => {
       {/* Header */}
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Quản lý Danh mục</h1>
-        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          onClick={() => setIsAddModalOpen(true)}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Thêm danh mục mới
         </button>
@@ -472,6 +435,10 @@ const CategoryManagementDashboard = () => {
           </div>
         </div>
       </div>
+      <AddCategoryModal 
+  isOpen={isAddModalOpen} 
+  onClose={() => setIsAddModalOpen(false)} 
+/>
     </div>
   );
 };
