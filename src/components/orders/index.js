@@ -208,7 +208,7 @@ const OrderManagementDashboard = () => {
       {/* Stats Cards */}
       <div className="flex justify-between gap-10">
         <StatsCard
-          title="Tổng doanh thu"
+          title="Tổng doanh số bán hàng"
           value={`${formatPrice(dashboardData.stats.totalRevenue)}`}
           color="bg-yellow-100"
         />

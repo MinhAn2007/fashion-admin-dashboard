@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import moment from "moment";
 import {
   BarChart,
   Bar,
@@ -14,41 +15,112 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Calendar } from "lucide-react";
 import StatsCard from "../StatsCard";
 import OrderDashboardFilter from "../../utils/Filter";
+import { formatPrice } from "../../utils/FormatPrice";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
 const SalesDashboard = () => {
-  const revenueData = [
-    { month: "Jan", revenue: 4000, growth: 0 },
-    { month: "Feb", revenue: 4500, growth: 12.5 },
-    { month: "Mar", revenue: 5100, growth: 13.3 },
-    { month: "Apr", revenue: 4800, growth: -5.9 },
-    { month: "May", revenue: 5500, growth: 14.6 },
-    { month: "Jun", revenue: 6000, growth: 9.1 },
-  ];
+  const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [dateRange, setDateRange] = useState({
+    startDate: moment().subtract(6, "months").startOf("month"),
+    endDate: moment().endOf("month"),
+  });
 
-  const salesByCategory = [
-    { name: "Electronics", value: 35 },
-    { name: "Clothing", value: 25 },
-    { name: "Food", value: 20 },
-    { name: "Others", value: 20 },
-  ];
+  const API = process.env.REACT_APP_API_ENDPOINT;
 
-  const formatCurrency = (value) => {
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(value * 1000000);
+  const fetchDashboardData = async (startDate, endDate) => {
+    try {
+      setLoading(true);
+      const response = await fetch(
+        `${API}/api/revenue/dashboard?startDate=${startDate}&endDate=${endDate}`
+      );
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard data");
+      }
+      const data = await response.json();
+      const groupedByParentId = data.salesByCategory
+      .filter(item => ![1, 2, 3, 4].includes(item.id)) 
+      .reduce((acc, item) => {
+        const parentId = item.parent_id;
+        if (parentId && [1, 2, 3, 4].includes(parentId)) {
+          if (!acc[parentId]) {
+            acc[parentId] = { total_quantity: 0 };
+          }
+          acc[parentId].total_quantity += parseInt(item.total_quantity, 10) || 0;
+        }
+        return acc;
+      }, {});
+  
+      const updatedData = data.salesByCategory.map(item => {
+        if (groupedByParentId[item.id]) {
+          return {
+            ...item,
+            total_quantity: parseInt(item.total_quantity, 10) + groupedByParentId[item.id].total_quantity,
+          };
+        }
+        return item;
+      });
+      console.log("data", updatedData);
+      
+
+      data.salesByCategory = updatedData.filter(item => [1, 2, 3, 4].includes(item.id));
+      
+      setDashboardData(data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    fetchDashboardData(
+      dateRange.startDate.format("YYYY-MM-DD"),
+      dateRange.endDate.format("YYYY-MM-DD")
+    );
+  }, [dateRange]);
+
+
+  const processMonthlyRevenueData = () => {
+    return (
+      dashboardData?.monthlyRevenue.map((item) => ({
+        month: moment(item.month, "YYYY-MM").format("MMM"),
+        revenue: parseFloat(item.revenue),
+        growth:
+          dashboardData.growthRates.find((g) => g.month === item.month)
+            ?.growthRate || 0,
+      })) || []
+    );
+  };
+
+  const processSalesByCategoryData = () => {
+    const totalSales = dashboardData?.salesByCategory.reduce(
+      (acc, item) => acc + item.total_quantity,
+      0
+    );
+    return (
+      dashboardData?.salesByCategory.map((item) => ({
+      name: item.name,
+      value: totalSales ? Math.round((item.total_quantity / totalSales) * 100) : 0,
+      })) || []
+    );
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
-      {/* Header */}
       <div className="flex justify-between items-center">
-        <OrderDashboardFilter />
+        <OrderDashboardFilter
+          onDateRangeChange={({ startDate, endDate }) =>
+            fetchDashboardData(startDate, endDate)
+          }
+        />
         <h1 className="text-2xl font-bold">Báo cáo doanh thu</h1>
       </div>
 
@@ -56,16 +128,28 @@ const SalesDashboard = () => {
       <div className="flex flex-wrap justify-between gap-4">
         <StatsCard
           title="Tổng doanh thu"
-          value={formatCurrency(6000)}
+          value={formatPrice(dashboardData.stats.totalRevenue)}
           color="bg-blue-100"
         />
-        <StatsCard title="Đơn hàng" value="245" color="bg-green-100" />
+        <StatsCard
+          title="Đơn hàng"
+          value={dashboardData.stats.totalOrders}
+          color="bg-green-100"
+        />
         <StatsCard
           title="Giá trị trung bình"
-          value={formatCurrency(24.5)}
+          value={formatPrice(dashboardData.stats.averageOrderValue)}
           color="bg-yellow-100"
         />
-        <StatsCard title="Tỷ lệ tăng trưởng" value="+12%" color="bg-pink-100" />
+        <StatsCard
+          title="Tỷ lệ tăng trưởng"
+          value={`+${(
+            dashboardData.growthRates.find(
+              (g) => g.month === moment().format("YYYY-MM")
+            )?.growthRate || 0
+          ).toFixed(2)}%`}
+          color="bg-pink-100"
+        />
       </div>
 
       {/* Revenue Chart */}
@@ -75,11 +159,11 @@ const SalesDashboard = () => {
         </div>
         <div className="w-full">
           <ResponsiveContainer width="100%" height={400}>
-            <LineChart data={revenueData}>
+            <LineChart data={processMonthlyRevenueData()}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
-              <YAxis tickFormatter={formatCurrency} domain={["auto", "auto"]} />
-              <Tooltip formatter={(value) => formatCurrency(value)} />
+              <YAxis tickFormatter={formatPrice} domain={["auto", "auto"]} />
+              <Tooltip formatter={(value) => formatPrice(value)} />
               <Legend />
               <Line
                 type="monotone"
@@ -103,7 +187,7 @@ const SalesDashboard = () => {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={salesByCategory}
+                  data={processSalesByCategoryData()}
                   cx="50%"
                   cy="50%"
                   labelLine={true}
@@ -112,7 +196,7 @@ const SalesDashboard = () => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {salesByCategory.map((entry, index) => (
+                  {processSalesByCategoryData().map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}
@@ -131,13 +215,13 @@ const SalesDashboard = () => {
           </div>
           <div className="w-full">
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={revenueData}>
+              <BarChart data={processMonthlyRevenueData()}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis tickFormatter={(value) => `${value}%`} />
                 <Tooltip formatter={(value) => `${value}%`} />
                 <Bar dataKey="growth" fill="#0088FE" name="Tăng trưởng">
-                  {revenueData.map((entry, index) => (
+                  {processMonthlyRevenueData().map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={entry.growth >= 0 ? "#00C49F" : "#FF8042"}

@@ -2,70 +2,61 @@ import React, { useState } from 'react';
 import DateRangePicker from 'react-daterange-picker';
 import 'react-daterange-picker/dist/css/react-calendar.css';
 import moment from 'moment';
+import 'moment-range';
 
 const OrderDashboardFilter = ({ onDateRangeChange }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [dateRange, setDateRange] = useState(null);
+  const [dateRange, setDateRange] = useState(
+    moment.range(moment().startOf('month'), moment().endOf('month'))
+  );
 
-  // Predefined date range options
   const dateRangePresets = [
     {
       label: '1 Tháng trước',
-      range: () => ({
-        start: moment().subtract(1, 'month').startOf('month'),
-        end: moment().subtract(1, 'month').endOf('month')
-      })
+      range: () => moment.range(
+        moment().subtract(1, 'month').startOf('month'),
+        moment().subtract(1, 'month').endOf('month')
+      )
     },
     {
       label: '3 Tháng trước',
-      range: () => ({
-        start: moment().subtract(3, 'month').startOf('month'),
-        end: moment().endOf('month')
-      })
+      range: () => moment.range(
+        moment().subtract(3, 'month').startOf('month'), 
+        moment().endOf('month')
+      )
     },
     {
       label: 'Năm nay',
-      range: () => ({
-        start: moment().startOf('year'),
-        end: moment().endOf('month')
-      })
+      range: () => moment.range(
+        moment().startOf('year'),
+        moment().endOf('month')
+      )
     },
     {
       label: 'Năm ngoái',
-      range: () => ({
-        start: moment().subtract(1, 'year').startOf('year'),
-        end: moment().subtract(1, 'year').endOf('year')
-      })
+      range: () => moment.range(
+        moment().subtract(1, 'year').startOf('year'),
+        moment().subtract(1, 'year').endOf('year')
+      )
     }
   ];
 
-  const handleSelect = (range) => {
+  const handleSelect = (range, states) => {
     setDateRange(range);
     setIsOpen(false);
     
-    if (range && range.start && range.end) {
-      onDateRangeChange({
-        startDate: range.start.format('YYYY-MM-DD'),
-        endDate: range.end.format('YYYY-MM-DD')
-      });
-    }
+    onDateRangeChange({
+      startDate: range.start.format('YYYY-MM-DD'),
+      endDate: range.end.format('YYYY-MM-DD')
+    });
   };
 
   const handlePresetSelect = (preset) => {
     const selectedRange = preset.range();
-    const range = {
-      start: selectedRange.start,
-      end: selectedRange.end
-    };
-    handleSelect(range);
+    handleSelect(selectedRange);
   };
 
   const renderDateRangeLabel = () => {
-    if (!dateRange || !dateRange.start || !dateRange.end) {
-      return 'Chọn ngày cụ thể';
-    }
-    
-    // Use moment's format method safely
     return `${dateRange.start.format('DD/MM/YYYY')} - ${dateRange.end.format('DD/MM/YYYY')}`;
   };
 
@@ -82,7 +73,7 @@ const OrderDashboardFilter = ({ onDateRangeChange }) => {
         <div className="fixed mt-2 bg-white border rounded shadow-lg z-[99999999999]">
           <div className="flex">
             <div className="border-r p-2">
-              <h3 className="font-bold mb-2">Preset Ranges</h3>
+              <h3 className="font-bold mb-2">Khoảng thời gian</h3>
               {dateRangePresets.map((preset, index) => (
                 <button
                   key={index}
