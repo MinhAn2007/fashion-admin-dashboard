@@ -18,6 +18,7 @@ import {
 import StatsCard from "../StatsCard";
 import OrderDashboardFilter from "../../utils/Filter";
 import { formatPrice } from "../../utils/FormatPrice";
+import * as XLSX from "xlsx";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
@@ -43,32 +44,36 @@ const SalesDashboard = () => {
       }
       const data = await response.json();
       const groupedByParentId = data.salesByCategory
-      .filter(item => ![1, 2, 3, 4].includes(item.id)) 
-      .reduce((acc, item) => {
-        const parentId = item.parent_id;
-        if (parentId && [1, 2, 3, 4].includes(parentId)) {
-          if (!acc[parentId]) {
-            acc[parentId] = { total_quantity: 0 };
+        .filter((item) => ![1, 2, 3, 4].includes(item.id))
+        .reduce((acc, item) => {
+          const parentId = item.parent_id;
+          if (parentId && [1, 2, 3, 4].includes(parentId)) {
+            if (!acc[parentId]) {
+              acc[parentId] = { total_quantity: 0 };
+            }
+            acc[parentId].total_quantity +=
+              parseInt(item.total_quantity, 10) || 0;
           }
-          acc[parentId].total_quantity += parseInt(item.total_quantity, 10) || 0;
-        }
-        return acc;
-      }, {});
-  
-      const updatedData = data.salesByCategory.map(item => {
+          return acc;
+        }, {});
+
+      const updatedData = data.salesByCategory.map((item) => {
         if (groupedByParentId[item.id]) {
           return {
             ...item,
-            total_quantity: parseInt(item.total_quantity, 10) + groupedByParentId[item.id].total_quantity,
+            total_quantity:
+              parseInt(item.total_quantity, 10) +
+              groupedByParentId[item.id].total_quantity,
           };
         }
         return item;
       });
       console.log("data", updatedData);
-      
 
-      data.salesByCategory = updatedData.filter(item => [1, 2, 3, 4].includes(item.id));
-      
+      data.salesByCategory = updatedData.filter((item) =>
+        [1, 2, 3, 4].includes(item.id)
+      );
+
       setDashboardData(data);
     } catch (err) {
       setError(err.message);
@@ -83,7 +88,6 @@ const SalesDashboard = () => {
       dateRange.endDate.format("YYYY-MM-DD")
     );
   }, [dateRange]);
-
 
   const processMonthlyRevenueData = () => {
     return (
@@ -104,15 +108,105 @@ const SalesDashboard = () => {
     );
     return (
       dashboardData?.salesByCategory.map((item) => ({
-      name: item.name,
-      value: totalSales ? Math.round((item.total_quantity / totalSales) * 100) : 0,
+        name: item.name,
+        value: totalSales
+          ? Math.round((item.total_quantity / totalSales) * 100)
+          : 0,
       })) || []
     );
   };
 
   if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
+  const exportToExcel = () => {
+    if (!dashboardData) return;
 
+    // Prepare Monthly Revenue Data
+    const monthlyRevenueSheet = dashboardData.monthlyRevenue.map((item) => ({
+      Tháng: moment(item.month, "YYYY-MM").format("MMM YYYY"),
+      "Doanh thu (VNĐ)": parseFloat(item.revenue),
+      "Tăng trưởng (%)":
+        dashboardData.growthRates.find((g) => g.month === item.month)
+          ?.growthRate || 0,
+    }));
+
+    // Prepare Sales by Category Data
+    const totalSales = dashboardData.salesByCategory.reduce(
+      (acc, item) => acc + item.total_quantity,
+      0
+    );
+
+    const salesByCategorySheet = dashboardData.salesByCategory.map((item) => ({
+      "Danh mục": item.name,
+      "Số lượng": item.total_quantity,
+      "Tỷ lệ (%)": totalSales
+        ? Math.round((item.total_quantity / totalSales) * 100)
+        : 0,
+    }));
+
+    const orderByStatus = dashboardData.ordersByStatusResult.map((item) => ({
+      "Trạng thái": item.status,
+      "Số lượng": item.total_orders,
+      "Doanh thu": item.total_revenue,
+      "Giá trị trung bình": item.average_order_value,
+    }));
+
+
+    // Prepare Summary Sheet
+    const summarySheet = [
+      {
+        "Chỉ số": "Tổng doanh thu",
+        "Giá trị": formatPrice(dashboardData.stats.totalRevenue),
+      },
+      {
+        "Chỉ số": "Tổng đơn hàng",
+        "Giá trị": dashboardData.stats.totalOrders,
+      },
+      {
+        "Chỉ số": "Giá trị đơn hàng trung bình",
+        "Giá trị": formatPrice(dashboardData.stats.averageOrderValue),
+      },
+      {
+        "Chỉ số": "Tỷ lệ tăng trưởng",
+        "Giá trị": `+${(
+          dashboardData.growthRates.find(
+            (g) => g.month === moment().format("YYYY-MM")
+          )?.growthRate || 0
+        ).toFixed(2)}%`,
+      },
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(monthlyRevenueSheet),
+      "Doanh Thu Theo Tháng"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(salesByCategorySheet),
+      "Doanh Thu Theo Danh Mục"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(summarySheet),
+      "Tóm Tắt"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(orderByStatus),
+      "Tình Trạng Đơn Hàng"
+    );
+
+    // Generate Excel file
+    XLSX.writeFile(
+      wb,
+      `Bao_Cao_Doanh_Thu_tu_${dateRange.startDate.format(
+        "DD-MM-YYYY"
+      )}_den_${dateRange.endDate.format("DD-MM-YYYY")}.xlsx`
+    );
+  };
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center">
@@ -121,7 +215,16 @@ const SalesDashboard = () => {
             fetchDashboardData(startDate, endDate)
           }
         />
-        <h1 className="text-2xl font-bold">Báo cáo doanh thu</h1>
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={exportToExcel}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+            disabled={loading}
+          >
+            Xuất Excel
+          </button>
+          <h1 className="text-2xl font-bold">Báo cáo doanh thu</h1>
+        </div>{" "}
       </div>
 
       {/* Stats Cards */}
