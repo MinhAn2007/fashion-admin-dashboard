@@ -24,6 +24,8 @@ import { BarChart, Bar, PieChart, Pie } from "recharts";
 import { formatPrice } from "../../utils/FormatPrice";
 import { Link } from "react-router-dom";
 import OrderDashboardFilter from "../../utils/Filter";
+import moment from "moment";
+import * as XLSX from "xlsx";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -135,7 +137,8 @@ const OrderManagementDashboard = () => {
   }, [dashboardData?.orders, searchTerm, sortConfig, showNeedAttention]);
 
   const fetchDashboardData = async (startDate, endDate) => {
-    try {      const response = await fetch(
+    try {
+      const response = await fetch(
         `${API}/api/orders/dashboard?startDate=${startDate}&endDate=${endDate}`
       );
       if (!response.ok) {
@@ -145,7 +148,7 @@ const OrderManagementDashboard = () => {
       setDashboardData(data.data);
     } catch (err) {
       setError(err.message);
-    } 
+    }
   };
 
   const processedData = useMemo(() => {
@@ -194,7 +197,65 @@ const OrderManagementDashboard = () => {
       </div>
     );
   }
+  const exportToExcel = () => {
+    if (!dashboardData) return;
 
+    // Prepare Orders Sheet
+    const ordersSheet = filteredOrders.map((order) => ({
+      "Mã đơn hàng": order.id,
+      "Khách hàng": order.customerName,
+      "Trạng thái": STATUS_DISPLAY_MAP[order.status] || order.status,
+      "Tổng tiền": formatPrice(order.total),
+      "Ngày tạo": moment(order.createdAt).format("DD-MM-YYYY"),
+    }));
+
+    // Prepare Order Status Summary Sheet
+    const orderStatusSummary = orderStatusStats.map((status) => ({
+      "Trạng thái": status.status,
+      "Số lượng": status.count,
+    }));
+
+    // Prepare Summary Sheet
+    const summarySheet = [
+      {
+        "Chỉ số": "Tổng doanh số",
+        "Giá trị": formatPrice(dashboardData.stats.totalRevenue),
+      },
+      {
+        "Chỉ số": "Tỷ lệ hoàn trả",
+        "Giá trị": `${dashboardData.stats.returnRate}%`,
+      },
+      {
+        "Chỉ số": "Đơn hàng chờ xác nhận",
+        "Giá trị": dashboardData.stats.pendingOrders,
+      },
+      {
+        "Chỉ số": "Tổng đơn hàng",
+        "Giá trị": dashboardData.stats.totalOrders,
+      },
+    ];
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(ordersSheet),
+      "Danh Sách Đơn Hàng"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(orderStatusSummary),
+      "Trạng Thái Đơn Hàng"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(summarySheet),
+      "Tóm Tắt"
+    );
+
+    // Generate Excel file
+    XLSX.writeFile(wb, "BaoCaoDonHang.xlsx");
+  };
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center">
@@ -354,6 +415,12 @@ const OrderManagementDashboard = () => {
               Danh sách đơn hàng ({filteredOrders.length})
             </h3>
             <div className="flex gap-4">
+              <button
+                onClick={exportToExcel}
+                className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+              >
+                Xuất Excel
+              </button>
               <input
                 type="text"
                 placeholder="Tìm kiếm đơn hàng..."
