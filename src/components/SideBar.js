@@ -9,6 +9,7 @@ import {
 } from "react-icons/fi";
 import { Link, useNavigate } from "react-router-dom";
 import { TbCategoryPlus, TbMessage } from "react-icons/tb";
+import { BiMoney } from "react-icons/bi";
 
 const Sidebar = () => {
   const navigate = useNavigate();
@@ -27,6 +28,11 @@ const Sidebar = () => {
         <Link to="/" className="flex items-center mb-4">
           <li className="flex items-center">
             <FiHome className="mr-2" /> Trang chủ
+          </li>
+        </Link>
+        <Link to="/revenue" className="flex items-center mb-4">
+          <li className="flex items-center">
+            <BiMoney className="mr-2" /> Doanh thu
           </li>
         </Link>
         <Link to="/order" className="flex items-center">
