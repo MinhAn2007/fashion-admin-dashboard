@@ -135,9 +135,7 @@ const OrderManagementDashboard = () => {
   }, [dashboardData?.orders, searchTerm, sortConfig, showNeedAttention]);
 
   const fetchDashboardData = async (startDate, endDate) => {
-    try {
-      setLoading(true);
-      const response = await fetch(
+    try {      const response = await fetch(
         `${API}/api/orders/dashboard?startDate=${startDate}&endDate=${endDate}`
       );
       if (!response.ok) {
@@ -147,9 +145,7 @@ const OrderManagementDashboard = () => {
       setDashboardData(data.data);
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } 
   };
 
   const processedData = useMemo(() => {
