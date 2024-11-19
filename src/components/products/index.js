@@ -24,6 +24,9 @@ import {
 
 import { formatPrice } from "../../utils/FormatPrice";
 import { Link, useNavigate } from "react-router-dom";
+import OrderDashboardFilter from "../../utils/Filter";
+import moment from "moment";
+import * as XLSX from "xlsx";
 
 import EditProductModal from "./EditModal";
 const ITEMS_PER_PAGE = 10;
@@ -38,6 +41,7 @@ const ProductDashboard = () => {
 
   const [productStats, setProductStats] = useState({});
   const [revenueStats, setRevenueStats] = useState([]);
+  const [salesByTime, setSalesByTime] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -61,7 +65,8 @@ const ProductDashboard = () => {
       const revenueData = await revenueRes.json();
 
       setProductStats(productData);
-      setRevenueStats(revenueData);
+      setRevenueStats(revenueData.productRevenueStats);
+      setSalesByTime(revenueData.salesByTimeQuery);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -77,6 +82,96 @@ const ProductDashboard = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm]);
+
+  const fetchDashboardData = async (startDate, endDate) => {
+    try {
+      const [productRes, revenueRes] = await Promise.all([
+        fetch(
+          `${API_ENDPOINT}/api/productStats?startDate=${startDate}&endDate=${endDate}`
+        ),
+        fetch(
+          `${API_ENDPOINT}/api/productRevenueStats?startDate=${startDate}&endDate=${endDate}`
+        ),
+      ]);
+
+      if (!productRes.ok || !revenueRes.ok) {
+        throw new Error("Failed to fetch data");
+      }
+
+      const productData = await productRes.json();
+      const revenueData = await revenueRes.json();
+
+      setProductStats(productData);
+      setRevenueStats(revenueData.productRevenueStats);
+      setSalesByTime(revenueData.salesByTimeQuery);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+  const exportToExcel = () => {
+    if (!revenueStats.length) return;
+
+    // Prepare Product Data Sheet
+    const productSheet = revenueStats.map((product) => ({
+      "Tên sản phẩm": product.name,
+      "Tồn kho": product.stock_quantity,
+      "Đã bán": product.sold_quantity,
+      "Thành tiền": product.revenue,
+      "Trạng thái":
+        product.status === 1 ? "Đang kinh doanh" : "Ngừng kinh doanh",
+    }));
+
+    // Prepare Top Stock Products Sheet
+    const topStockSheet = mostStock.map((product, index) => ({
+      "Xếp hạng": index + 1,
+      "Tên sản phẩm": product.name,
+      "Số lượng tồn": product.stock_quantity,
+    }));
+
+    // Prepare Top Revenue Products Sheet
+    const topRevenueSheet = mostRevenue.map((product, index) => ({
+      "Xếp hạng": index + 1,
+      "Tên sản phẩm": product.name,
+      "Doanh thu": product.revenue,
+    }));
+
+    const salesByTimeSheet = salesByTime.map((item) => ({
+      "Mã sản phẩm": item.product_id,
+      "Tên sản phẩm": item.product_name,
+      "Số lượng bán": item.total_sold_quantity,
+      "Ngày bán đầu": moment(item.first_sale_date).format("DD/MM/YYYY"),
+      "Ngày bán cuối": moment(item.last_sale_date).format("DD/MM/YYYY"),
+    }));
+
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(productSheet),
+      "Danh Sách Sản Phẩm"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(topStockSheet),
+      "Top Sản Phẩm Tồn Kho"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(topRevenueSheet),
+      "Top Sản Phẩm Doanh Thu"
+    );
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(salesByTimeSheet),
+      "Sản Phẩm Bán Theo Thời Gian"
+    );
+
+    // Generate Excel file
+    XLSX.writeFile(
+      wb,
+      `Bao_Cao_San_Pham_${moment().format("DD-MM-YYYY")}.xlsx`
+    );
+  };
 
   const filterProducts = (items) => {
     if (!searchTerm.trim()) return items;
@@ -170,13 +265,27 @@ const ProductDashboard = () => {
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       {/* Header */}
       <div className="flex justify-between items-center">
+        <OrderDashboardFilter
+          onDateRangeChange={({ startDate, endDate }) =>
+            fetchDashboardData(startDate, endDate)
+          }
+        />
         <h1 className="text-2xl font-bold">Quản lý Sản phẩm</h1>
-        <Link to="/new-product">
-          <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
-            <Plus className="w-4 h-4 mr-2" />
-            Thêm sản phẩm
+        <div className="flex items-center gap-4">
+          <button
+            onClick={exportToExcel}
+            className="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors"
+            disabled={loading}
+          >
+            Xuất Excel
           </button>
-        </Link>
+          <Link to="/new-product">
+            <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+              <Plus className="w-4 h-4 mr-2" />
+              Thêm sản phẩm
+            </button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
@@ -208,7 +317,7 @@ const ProductDashboard = () => {
 
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold">Top doanh thu</h3>
+            <h3 className="text-lg font-semibold">Top Thành tiền</h3>
             <DollarSign className="text-yellow-500" />
           </div>
           <div className="space-y-4">
@@ -234,7 +343,7 @@ const ProductDashboard = () => {
       <div className="bg-white rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold">
-            Biểu đồ {chartFilter === "sales" ? "doanh số" : "doanh thu"}
+            Biểu đồ {chartFilter === "sales" ? "doanh số" : "Thành tiền"}
           </h3>
           <div className="flex gap-4">
             <select
@@ -243,7 +352,7 @@ const ProductDashboard = () => {
               onChange={(e) => setChartFilter(e.target.value)}
             >
               <option value="sales">Doanh số</option>
-              <option value="revenue">Doanh thu</option>
+              <option value="revenue">Thành tiền</option>
             </select>
             <select
               className="border rounded-lg px-3 py-2"
@@ -341,7 +450,7 @@ const ProductDashboard = () => {
                     onClick={() => handleSort("revenue")}
                     className="flex items-center font-bold hover:text-blue-600"
                   >
-                    Doanh thu
+                    Thành tiền
                     <ArrowUpDown className="ml-2 h-4 w-4" />
                   </button>
                 </th>

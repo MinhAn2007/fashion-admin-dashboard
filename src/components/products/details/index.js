@@ -183,7 +183,7 @@ const ProductDetails = () => {
           <p className="text-xl">{productData.product.total_sold}</p>
         </div>
         <div className="bg-purple-100 p-4 rounded-lg">
-          <h3 className="font-semibold">Tổng doanh thu</h3>
+          <h3 className="font-semibold">Tổng Thành tiền</h3>
           <p className="text-xl">
             {formatPrice(productData.product.total_revenue)}
           </p>
@@ -356,7 +356,7 @@ const ProductDetails = () => {
                   className="px-4 py-2 cursor-pointer"
                   onClick={() => handleSort("revenue")}
                 >
-                  Doanh thu <ArrowUpDown className="inline ml-2" />
+                  Thành tiền <ArrowUpDown className="inline ml-2" />
                 </th>
                 <th
                   className="px-4 py-2 cursor-pointer"
