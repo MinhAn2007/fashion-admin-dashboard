@@ -113,7 +113,6 @@ const SalesDashboard = () => {
     );
   };
 
-  if (loading) return <div>Loading...</div>;
   if (error) return <div>Error: {error}</div>;
   const exportToExcel = () => {
     if (!dashboardData) return;

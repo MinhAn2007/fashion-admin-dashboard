@@ -66,7 +66,6 @@ const OrderManagementDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showNeedAttention, setShowNeedAttention] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const API = process.env.REACT_APP_API_ENDPOINT;
 
@@ -178,14 +177,6 @@ const OrderManagementDashboard = () => {
     });
     return Object.entries(stats).map(([status, count]) => ({ status, count }));
   }, [filteredOrders]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-lg">Đang tải dữ liệu...</div>
-      </div>
-    );
-  }
 
   if (error) {
     return (

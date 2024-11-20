@@ -229,7 +229,7 @@ const OrderDetail = () => {
                 : "bg-red-600 hover:bg-red-700"
             }`}
           >
-            {isUpdatingStatus ? (
+            {isUpdatingStatus && (
               <div className="flex items-center">
                 <svg className="animate-spin h-4 w-4 mr-2 text-white" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -237,9 +237,6 @@ const OrderDetail = () => {
                 </svg>
                 Đang xử lý...
               </div>
-            ) : (
-              <>
-              </>
             )}
           </button>
         )}
