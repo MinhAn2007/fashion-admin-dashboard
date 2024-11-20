@@ -205,6 +205,8 @@ const SalesDashboard = () => {
       )}_den_${dateRange.endDate.format("DD-MM-YYYY")}.xlsx`
     );
   };
+
+  if (loading) return <div>Loading...</div>;
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center">
