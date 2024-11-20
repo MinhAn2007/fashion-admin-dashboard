@@ -66,11 +66,14 @@ const OrderManagementDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [showNeedAttention, setShowNeedAttention] = useState(false);
   const [dashboardData, setDashboardData] = useState(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const API = process.env.REACT_APP_API_ENDPOINT;
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setLoading(true);
+
       try {
         const response = await fetch(`${API}/api/orders/dashboard`);
         if (!response.ok) {
@@ -80,6 +83,8 @@ const OrderManagementDashboard = () => {
         setDashboardData(data.data);
       } catch (err) {
         setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -244,6 +249,15 @@ const OrderManagementDashboard = () => {
     // Generate Excel file
     XLSX.writeFile(wb, "BaoCaoDonHang.xlsx");
   };
+
+  if (loading || !dashboardData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg text-gray-600">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center">

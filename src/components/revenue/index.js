@@ -35,6 +35,7 @@ const SalesDashboard = () => {
 
   const fetchDashboardData = async (startDate, endDate) => {
     try {
+      setLoading(true);
       const response = await fetch(
         `${API}/api/revenue/dashboard?startDate=${startDate}&endDate=${endDate}`
       );
@@ -77,6 +78,8 @@ const SalesDashboard = () => {
     } catch (err) {
       setError(err.message);
     }
+
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -146,7 +149,6 @@ const SalesDashboard = () => {
       "Doanh thu": item.total_revenue,
       "Giá trị trung bình": item.average_order_value,
     }));
-
 
     // Prepare Summary Sheet
     const summarySheet = [
