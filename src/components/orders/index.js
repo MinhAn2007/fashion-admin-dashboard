@@ -73,7 +73,6 @@ const OrderManagementDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        setLoading(true);
         const response = await fetch(`${API}/api/orders/dashboard`);
         if (!response.ok) {
           throw new Error("Failed to fetch dashboard data");
@@ -82,8 +81,6 @@ const OrderManagementDashboard = () => {
         setDashboardData(data.data);
       } catch (err) {
         setError(err.message);
-      } finally {
-        setLoading(false);
       }
     };
 

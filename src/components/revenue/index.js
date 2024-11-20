@@ -35,7 +35,6 @@ const SalesDashboard = () => {
 
   const fetchDashboardData = async (startDate, endDate) => {
     try {
-      setLoading(true);
       const response = await fetch(
         `${API}/api/revenue/dashboard?startDate=${startDate}&endDate=${endDate}`
       );
@@ -77,8 +76,6 @@ const SalesDashboard = () => {
       setDashboardData(data);
     } catch (err) {
       setError(err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
