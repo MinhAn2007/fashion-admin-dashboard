@@ -51,6 +51,8 @@ const Dashboard = () => {
           updatedData.map(item => ({
             category: item.category_name,
             total_quantity_sold: parseInt(item.total_sold, 10),
+            // Add Vietnamese label for tooltip
+            Số_lượng: parseInt(item.total_sold, 10),
           }))
         );
       
@@ -58,6 +60,8 @@ const Dashboard = () => {
           result.data.monthlyRevenue.map(item => ({
             month: item.month,
             total_revenue: parseFloat(item.total_revenue),
+            // Add Vietnamese label for tooltip
+            Doanh_thu: parseFloat(item.total_revenue),
           }))
         );
       
@@ -65,7 +69,7 @@ const Dashboard = () => {
       }
       
     } catch (error) {
-      console.error('Error getting dashboard details:', error);
+      console.error('Lỗi khi lấy dữ liệu dashboard:', error);
     }
   };
 
@@ -77,75 +81,83 @@ const Dashboard = () => {
     setSelectedProduct(e.target.value);
   };
 
+  // Custom tooltip để hiển thị đơn vị tiền tệ
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-2 border rounded shadow">
+          <p className="text-sm">{`Tháng: ${label}`}</p>
+          <p className="text-sm text-green-600">
+            {`Doanh thu: ${new Intl.NumberFormat('vi-VN', { 
+              style: 'currency', 
+              currency: 'VND' 
+            }).format(payload[0].value)}`}
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <div className="space-y-6 flex flex-col items-center">
       <div className="flex w-full space-x-6 mt-10">
-        {/* Monthly Revenue (left side 50%) */}
+        {/* Biểu đồ doanh thu theo tháng (bên trái 50%) */}
         <div className="bg-white p-4 rounded-lg shadow-md w-1/2">
-          <div className="flex justify-between items-center mb-4">
-            <h6 className="font-semibold">Doanh thu hàng tháng</h6>
-            <select
-              className="p-2 border rounded text-sm"
-              value={selectedMonth}
-              onChange={handleMonthChange}
-            >
-              <option value="All">Tất cả các tháng</option>
-              {lineData.map((item) => (
-                <option key={item.month} value={item.month}>
-                  {item.month}
-                </option>
-              ))}
-            </select>
-          </div>
           <ResponsiveContainer width="100%" height={550}>
             <LineChart data={lineData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" fontSize={12} />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="total_revenue" stroke="#22c55e" fill="#22c55e" strokeWidth={2} />
+              <YAxis 
+                tickFormatter={(value) => 
+                  new Intl.NumberFormat('vi-VN', { 
+                    notation: 'compact',
+                    compactDisplay: 'short',
+                    maximumFractionDigits: 1
+                  }).format(value)
+                }
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend formatter={() => 'Doanh thu'} />
+              <Line 
+                type="monotone" 
+                dataKey="total_revenue" 
+                name="Doanh thu"
+                stroke="#22c55e" 
+                fill="#22c55e" 
+                strokeWidth={2} 
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>
 
         <div className="w-1/2 flex flex-col space-y-6">
-          {/* Monthly Quantity Sold */}
+          {/* Biểu đồ số lượng bán hàng */}
           <div className="bg-white p-4 rounded-lg shadow-md">
-            <div className="flex justify-between items-center mb-4">
-              <h6 className="font-semibold">Số lượng bán hàng tháng</h6>
-              <select
-                className="p-2 border rounded text-sm"
-                value={selectedProduct}
-                onChange={handleProductChange}
-              >
-                <option value="All">Tất cả sản phẩm</option>
-                {barData.map((item) => (
-                  <option key={item.month} value={item.month}>
-                    {item.month}
-                  </option>
-                ))}
-              </select>
-            </div>
             <ResponsiveContainer width="101%" height={250}>
               <BarChart data={barData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="category" fontSize={12} />
                 <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="total_quantity_sold" fill="#8884d8" width={20} />
+                <Tooltip formatter={(value) => [`${value} sản phẩm`, 'Số lượng']} />
+                <Legend formatter={() => 'Số lượng bán ra'} />
+                <Bar 
+                  dataKey="total_quantity_sold" 
+                  name="Số lượng" 
+                  fill="#8884d8" 
+                  width={20} 
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
-          {/* Best Selling Products Table */}
+          {/* Bảng sản phẩm bán chạy nhất */}
           <div className="bg-white p-4 rounded-lg shadow-md">
             <h6 className="font-semibold mb-4">Sản phẩm bán chạy nhất</h6>
             <table className="min-w-full table-auto">
               <thead>
                 <tr className="border-b">
-                  <th className="px-4 py-2 text-left">Sản phẩm</th>
+                  <th className="px-4 py-2 text-left">Tên sản phẩm</th>
                   <th className="px-4 py-2 text-left">Số lượng đã bán</th>
                 </tr>
               </thead>

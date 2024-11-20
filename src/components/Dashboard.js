@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import StatsCard from "./StatsCard";
 import Chart from "./Chart";
 import { formatPrice } from "../utils/FormatPrice";
-import { Link } from "react-router-dom"
+import { Link } from "react-router-dom";
 
 const Dashboard = () => {
   const [timePeriod, setTimePeriod] = useState("Today");
@@ -12,7 +12,8 @@ const Dashboard = () => {
     newCustomers: 0,
     totalOrders: 0,
   });
-  const [pendingOrders, setPendingOrders] = useState(5);
+  const [pendingOrders, setPendingOrders] = useState([]);
+  const [activities, setActivities] = useState([]);
   const API = process.env.REACT_APP_API_ENDPOINT;
   const fetchDashboardData = async () => {
     try {
@@ -21,9 +22,31 @@ const Dashboard = () => {
       console.log(data);
 
       setDashboardData(data.data);
+      setPendingOrders(data.data.orderNeedAction);
+      setActivities(data.data.activities);
       console.log("dashboardData", dashboardData);
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("vi-VN");
+  };
+
+  // Format relative time for activities
+  const getRelativeTime = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
+
+    if (diffInHours < 24) {
+      return "Hôm nay";
+    } else if (diffInHours < 48) {
+      return "Hôm qua";
+    } else {
+      return `${Math.floor(diffInHours / 24)} ngày trước`;
     }
   };
 
@@ -31,25 +54,22 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [timePeriod]);
 
-  const recentActivities = [
-    { id: 1, text: "Đơn hàng #1234 đã được hoàn thành", time: "Hôm nay" },
-    {
-      id: 2,
-      text: "Sản phẩm mới 'Áo thun mùa hè' đã được thêm",
-      time: "Hôm qua",
-    },
-    {
-      id: 3,
-      text: "Khách hàng mới 'Nguyễn Văn A' đã đăng ký",
-      time: "2 ngày trước",
-    },
-  ];
-
-  const pendingOrdersList = [
-    { id: 101, name: "Đơn hàng #101", status: "Chờ xử lý", date: "01/11/2024" },
-    { id: 102, name: "Đơn hàng #102", status: "Chờ xử lý", date: "02/11/2024" },
-    { id: 103, name: "Đơn hàng #103", status: "Chờ xử lý", date: "03/11/2024" },
-  ];
+  const mappingStatusName = (status) => {
+    switch (status) {
+      case "Pending Confirmation":
+        return "Chờ xác nhận";
+      case "Completed":
+        return "Đã hoàn thành";
+      case "Cancelled":
+        return "Đã hủy";
+      case "Returned":
+        return "Đã trả hàng";
+      case "In Transit":
+        return "Đang giao hàng";
+      default:
+        return "Đã giao hàng";
+    }
+  };
 
   return (
     <div className="p-6 flex flex-col space-y-6">
@@ -97,11 +117,11 @@ const Dashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {pendingOrdersList.map((order) => (
+              {pendingOrders.map((order) => (
                 <tr key={order.id} className="border-b">
-                  <td className="px-4 py-2">{order.name}</td>
-                  <td className="px-4 py-2 text-orange-500">{order.status}</td>
-                  <td className="px-4 py-2">{order.date}</td>
+                  <td className="px-4 py-2">Đơn hàng #{order.id}</td>
+                  <td className="px-4 py-2 text-orange-500">{mappingStatusName(order.status)}</td>
+                  <td className="px-4 py-2">{formatDate(order.created_at)}</td>
                 </tr>
               ))}
             </tbody>
@@ -113,12 +133,14 @@ const Dashboard = () => {
           <div className="relative pl-6">
             <div className="absolute left-0 top-0 w-1 bg-gray-300 h-full"></div>
             <ul className="space-y-4">
-              {recentActivities.map((activity) => (
+              {activities.map((activity) => (
                 <li key={activity.id} className="flex items-center space-x-4">
                   <div className="w-4 h-4 bg-blue-500 rounded-full flex-shrink-0"></div>
                   <div>
-                    <p className="font-semibold">{activity.text}</p>
-                    <p className="text-sm text-gray-500">{activity.time}</p>
+                    <p className="font-semibold">{activity.description}</p>
+                    <p className="text-sm text-gray-500">
+                      {getRelativeTime(activity.created_at)}
+                    </p>
                   </div>
                 </li>
               ))}
