@@ -111,7 +111,6 @@ const OrderDetail = () => {
     );
 
   if (!order) return null;
-  console.log(order.status);
 
   const renderStatusActions = () => {
     const actions = STATUS_ACTIONS[order.status] || [];
