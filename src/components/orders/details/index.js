@@ -497,13 +497,22 @@ const OrderDetail = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Giảm giá:</span>
-                <span>- {formatPrice(order.discount)}</span>
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-500">{order.couponCode ? order.couponCode : ''}</span>
+                  {order.couponType === "percent" ? (
+                    <span className="text-gray-900">-{order.couponValue}%</span>
+                  ) : (
+                    <span className="text-gray-900">
+                      - {formatPrice(order.couponValue || 0)}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">
                   Giảm giá qua hình thức thanh toán:
                 </span>{" "}
-                <span>{order.paymentMethod ? "- 50.000đ" : "0đ"}</span>
+                <span>{order.paymentMethod === 'ONLINE' ? "- 50.000 đ" : "0 đ"}</span>
               </div>
               <div className="flex justify-between font-semibold text-lg pt-2 border-t">
                 <span>Tổng cộng:</span>
