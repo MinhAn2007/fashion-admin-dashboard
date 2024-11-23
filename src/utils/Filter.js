@@ -7,9 +7,12 @@ import 'moment-range';
 const OrderDashboardFilter = ({ onDateRangeChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [dateRange, setDateRange] = useState(
-    moment.range(moment().startOf('month'), moment().endOf('month'))
+    moment.range(
+      moment().subtract(1, 'year').startOf('day'), 
+      moment().endOf('day') 
+    )
   );
-
+  
   const dateRangePresets = [
     {
       label: '1 Tháng trước',

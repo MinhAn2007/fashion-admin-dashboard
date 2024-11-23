@@ -47,14 +47,20 @@ const ProductDashboard = () => {
 
   const [isOpenEditModal, setIsOpenEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [dateRange, setDateRange] = useState(
+    moment.range(
+      moment().subtract(1, 'year').startOf('day'), 
+      moment().endOf('day')
+    )
+  );
 
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT;
-  const fetchData = async () => {
+  const fetchData = async (startDate, endDate) => {
     try {
       setLoading(true);
       const [productRes, revenueRes] = await Promise.all([
-        fetch(`${API_ENDPOINT}/api/productStats`),
-        fetch(`${API_ENDPOINT}/api/productRevenueStats`),
+        fetch(`${API_ENDPOINT}/api/productStats?startDate=${startDate.format('YYYY-MM-DD')}&endDate=${endDate.format('YYYY-MM-DD')}`),
+        fetch(`${API_ENDPOINT}/api/productRevenueStats?startDate=${startDate.format('YYYY-MM-DD')}&endDate=${endDate.format('YYYY-MM-DD')}`)
       ]);
 
       if (!productRes.ok || !revenueRes.ok) {
@@ -75,7 +81,7 @@ const ProductDashboard = () => {
   };
 
   useEffect(() => {
-    fetchData();
+    fetchData(dateRange.start, dateRange.end);
   }, []);
 
   // Reset to first page when search term changes
@@ -109,68 +115,146 @@ const ProductDashboard = () => {
     }
   };
   const exportToExcel = () => {
-    if (!revenueStats.length) return;
-
-    // Prepare Product Data Sheet
-    const productSheet = revenueStats.map((product) => ({
-      "Tên sản phẩm": product.name,
-      "Tồn kho": product.stock_quantity,
-      "Đã bán": product.sold_quantity,
-      "Thành tiền": product.revenue,
-      "Trạng thái":
-        product.status === 1 ? "Đang kinh doanh" : "Ngừng kinh doanh",
-    }));
-
-    // Prepare Top Stock Products Sheet
-    const topStockSheet = mostStock.map((product, index) => ({
+    if (!revenueStats || !productStats || !salesByTime) return;
+  
+    const wb = XLSX.utils.book_new();
+  
+    const createHeader = (title, dateRange) => [
+      ["BÁO CÁO QUẢN LÝ SẢN PHẨM"],
+      [`${title}`],
+      [`Thời gian: ${dateRange || moment().format('DD/MM/YYYY')}`],
+      [],
+    ];
+  
+    const createFooter = () => [
+      [],
+      ["Người lập báo cáo:", "", "", "Người duyệt:"],
+      ["", "", "", ""],
+      ["", "", "", ""],
+      [`Ngày lập: ${moment().format("DD/MM/YYYY")}`],
+    ];
+  
+    // 1. Tổng quan sản phẩm
+    const summaryHeader = createHeader("TỔNG QUAN SẢN PHẨM");
+    
+    const summaryData = [
+      ["Chỉ số", "Giá trị"],
+      ["Tổng số sản phẩm", revenueStats.length.toString()],
+      ["Tổng doanh thu", formatPrice(revenueStats.reduce((sum, item) => sum + item.revenue, 0))],
+      ["Tổng số lượng bán", revenueStats.reduce((sum, item) => sum + item.sold_quantity, 0).toString()],
+      ["Tổng tồn kho", revenueStats.reduce((sum, item) => sum + item.stock_quantity, 0).toString()]
+    ];
+  
+    const summarySheet = [
+      ...summaryHeader,
+      ...summaryData,
+      ...createFooter()
+    ];
+  
+    // 2. Báo cáo top sản phẩm tồn kho
+    const stockHeader = createHeader("BÁO CÁO TOP SẢN PHẨM TỒN KHO");
+  
+    const stockData = mostStock.map((item, index) => ({
       "Xếp hạng": index + 1,
-      "Tên sản phẩm": product.name,
-      "Số lượng tồn": product.stock_quantity,
+      "Tên sản phẩm": item.name,
+      "Số lượng tồn": item.stock_quantity,
+      "Giá trị tồn": formatPrice(item.stock_quantity * item.price)
     }));
-
-    // Prepare Top Revenue Products Sheet
-    const topRevenueSheet = mostRevenue.map((product, index) => ({
+  
+    const stockSheet = [
+      ...stockHeader,
+      ["Xếp hạng", "Tên sản phẩm", "Số lượng tồn", "Giá trị tồn"],
+      ...stockData.map(Object.values),
+      ...createFooter()
+    ];
+  
+    // 3. Báo cáo top doanh thu
+    const revenueHeader = createHeader("BÁO CÁO TOP DOANH THU");
+  
+    const revenueData = mostRevenue.map((item, index) => ({
       "Xếp hạng": index + 1,
-      "Tên sản phẩm": product.name,
-      "Doanh thu": product.revenue,
+      "Tên sản phẩm": item.name,
+      "Số lượng bán": item.sold_quantity,
+      "Doanh thu": formatPrice(item.revenue)
     }));
-
-    const salesByTimeSheet = salesByTime.map((item) => ({
+  
+    const revenueSheet = [
+      ...revenueHeader,
+      ["Xếp hạng", "Tên sản phẩm", "Số lượng bán", "Doanh thu"],
+      ...revenueData.map(Object.values),
+      ...createFooter()
+    ];
+  
+    // 4. Báo cáo bán hàng theo thời gian
+    const timeHeader = createHeader("BÁO CÁO BÁN HÀNG THEO THỜI GIAN");
+  
+    const timeData = salesByTime.map(item => ({
       "Mã sản phẩm": item.product_id,
       "Tên sản phẩm": item.product_name,
       "Số lượng bán": item.total_sold_quantity,
       "Ngày bán đầu": moment(item.first_sale_date).format("DD/MM/YYYY"),
       "Ngày bán cuối": moment(item.last_sale_date).format("DD/MM/YYYY"),
+      "Doanh thu": formatPrice(item.total_revenue)
     }));
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
+  
+    const timeSheet = [
+      ...timeHeader,
+      ["Mã sản phẩm", "Tên sản phẩm", "Số lượng bán", "Ngày bán đầu", "Ngày bán cuối", "Doanh thu"],
+      ...timeData.map(Object.values),
+      ...createFooter()
+    ];
+  
+    // 5. Chi tiết sản phẩm
+    const detailHeader = createHeader("CHI TIẾT SẢN PHẨM");
+  
+    const detailData = revenueStats.map(product => ({
+      "Mã sản phẩm": product.id,
+      "Tên sản phẩm": product.name,
+      "Tồn kho": product.stock_quantity,
+      "Đã bán": product.sold_quantity,
+      "Doanh thu": formatPrice(product.revenue),
+      "Trạng thái": product.status === 1 ? "Đang kinh doanh" : "Ngừng kinh doanh"
+    }));
+  
+    const detailSheet = [
+      ...detailHeader,
+      ["Mã sản phẩm", "Tên sản phẩm", "Tồn kho", "Đã bán", "Doanh thu", "Trạng thái"],
+      ...detailData.map(Object.values),
+      ...createFooter()
+    ];
+  
+    // Thêm các sheet vào workbook
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(productSheet),
-      "Danh Sách Sản Phẩm"
+      XLSX.utils.aoa_to_sheet(summarySheet),
+      "Tổng Quan"
     );
+    
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(topStockSheet),
-      "Top Sản Phẩm Tồn Kho"
+      XLSX.utils.aoa_to_sheet(stockSheet),
+      "Top Tồn Kho"
     );
+    
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(topRevenueSheet),
-      "Top Sản Phẩm Doanh Thu"
+      XLSX.utils.aoa_to_sheet(revenueSheet),
+      "Top Doanh Thu"
     );
+    
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(salesByTimeSheet),
-      "Sản Phẩm Bán Theo Thời Gian"
+      XLSX.utils.aoa_to_sheet(timeSheet),
+      "Bán Theo Thời Gian"
     );
-
-    // Generate Excel file
-    XLSX.writeFile(
+    
+    XLSX.utils.book_append_sheet(
       wb,
-      `Bao_Cao_San_Pham_${moment().format("DD-MM-YYYY")}.xlsx`
+      XLSX.utils.aoa_to_sheet(detailSheet),
+      "Chi Tiết Sản Phẩm"
     );
+  
+    XLSX.writeFile(wb, `Bao_Cao_San_Pham_${moment().format("DD.MM.YYYY")}.xlsx`);
   };
 
   const filterProducts = (items) => {

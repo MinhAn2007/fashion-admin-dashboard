@@ -192,62 +192,149 @@ const OrderManagementDashboard = () => {
   }
   const exportToExcel = () => {
     if (!dashboardData) return;
-
-    // Prepare Orders Sheet
-    const ordersSheet = filteredOrders.map((order) => ({
+  
+    const wb = XLSX.utils.book_new();
+  
+    const createHeader = (title, dateRange) => [
+      ["BÁO CÁO QUẢN LÝ ĐƠN HÀNG"],
+      [`${title}`],
+      [`Thời gian: ${dateRange || moment().format('DD/MM/YYYY')}`],
+      [],
+    ];
+  
+    const createFooter = () => [
+      [],
+      ["Người lập báo cáo:", "", "", "Người duyệt:"],
+      ["", "", "", ""],
+      ["", "", "", ""],
+      [`Ngày lập: ${moment().format("DD/MM/YYYY")}`],
+    ];
+  
+    // 1. Báo cáo doanh số theo thời gian
+    const revenueHeader = createHeader(
+      "BÁO CÁO DOANH SỐ THEO THỜI GIAN"
+    );
+  
+    const revenueData = processedData.map((item) => ({
+      "Tháng": item.month,
+      "Doanh thu (VNĐ)": formatPrice(item.total_revenue),
+      "Tăng trưởng (%)": `${item.growth.toFixed(1)}%`
+    }));
+  
+    const revenueSheet = [
+      ...revenueHeader,
+      ["Tháng", "Doanh thu (VNĐ)", "Tăng trưởng (%)"],
+      ...revenueData.map(Object.values),
+      ...createFooter()
+    ];
+  
+    // 2. Báo cáo phương thức thanh toán
+    const paymentHeader = createHeader(
+      "BÁO CÁO PHƯƠNG THỨC THANH TOÁN"
+    );
+  
+    const paymentData = dashboardData.paymentStats.map((item) => ({
+      "Phương thức": item.name,
+      "Tỷ lệ (%)": `${item.value}%`,
+      "Số lượng đơn": item.count || 0
+    }));
+  
+    const paymentSheet = [
+      ...paymentHeader,
+      ["Phương thức", "Tỷ lệ (%)", "Số lượng đơn"],
+      ...paymentData.map(Object.values),
+      ...createFooter()
+    ];
+  
+    // 3. Báo cáo trạng thái đơn hàng
+    const statusHeader = createHeader(
+      "BÁO CÁO TRẠNG THÁI ĐƠN HÀNG"
+    );
+  
+    const statusData = orderStatusStats.map((item) => ({
+      "Trạng thái": item.status,
+      "Số lượng": item.count,
+      "Tỷ lệ (%)": `${((item.count / filteredOrders.length) * 100).toFixed(1)}%`
+    }));
+  
+    const statusSheet = [
+      ...statusHeader,
+      ["Trạng thái", "Số lượng", "Tỷ lệ (%)"],
+      ...statusData.map(Object.values),
+      ...createFooter()
+    ];
+  
+    // 4. Tổng kết báo cáo
+    const summaryHeader = createHeader(
+      "TỔNG KẾT BÁO CÁO"
+    );
+  
+    const summaryData = [
+      ["Chỉ số", "Giá trị"],
+      ["Tổng doanh số", formatPrice(dashboardData.stats.totalRevenue)],
+      ["Tỷ lệ hoàn trả", `${dashboardData.stats.returnRate}%`],
+      ["Đơn hàng chờ xác nhận", dashboardData.stats.pendingOrders.toString()],
+      ["Tổng số đơn hàng", dashboardData.stats.totalOrders.toString()]
+    ];
+  
+    const summarySheet = [
+      ...summaryHeader,
+      ...summaryData,
+      ...createFooter()
+    ];
+  
+    // 5. Chi tiết đơn hàng
+    const orderHeader = createHeader(
+      "CHI TIẾT ĐƠN HÀNG"
+    );
+  
+    const orderData = filteredOrders.map(order => ({
       "Mã đơn hàng": order.id,
       "Khách hàng": order.customerName,
       "Trạng thái": STATUS_DISPLAY_MAP[order.status] || order.status,
       "Tổng tiền": formatPrice(order.total),
-      "Ngày tạo": moment(order.createdAt).format("DD-MM-YYYY"),
+      "Ngày tạo": moment(order.createdAt).format("DD/MM/YYYY")
     }));
-
-    // Prepare Order Status Summary Sheet
-    const orderStatusSummary = orderStatusStats.map((status) => ({
-      "Trạng thái": status.status,
-      "Số lượng": status.count,
-    }));
-
-    // Prepare Summary Sheet
-    const summarySheet = [
-      {
-        "Chỉ số": "Tổng doanh số",
-        "Giá trị": formatPrice(dashboardData.stats.totalRevenue),
-      },
-      {
-        "Chỉ số": "Tỷ lệ hoàn trả",
-        "Giá trị": `${dashboardData.stats.returnRate}%`,
-      },
-      {
-        "Chỉ số": "Đơn hàng chờ xác nhận",
-        "Giá trị": dashboardData.stats.pendingOrders,
-      },
-      {
-        "Chỉ số": "Tổng đơn hàng",
-        "Giá trị": dashboardData.stats.totalOrders,
-      },
+  
+    const orderSheet = [
+      ...orderHeader,
+      ["Mã đơn hàng", "Khách hàng", "Trạng thái", "Tổng tiền", "Ngày tạo"],
+      ...orderData.map(Object.values),
+      ...createFooter()
     ];
-
-    // Create workbook
-    const wb = XLSX.utils.book_new();
+  
+    // Thêm các sheet vào workbook
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(ordersSheet),
-      "Danh Sách Đơn Hàng"
+      XLSX.utils.aoa_to_sheet(summarySheet),
+      "Tổng Kết"
     );
+    
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(orderStatusSummary),
+      XLSX.utils.aoa_to_sheet(revenueSheet),
+      "Doanh Số"
+    );
+    
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet(paymentSheet),
+      "Phương Thức Thanh Toán"
+    );
+    
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet(statusSheet),
       "Trạng Thái Đơn Hàng"
     );
+    
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(summarySheet),
-      "Tóm Tắt"
+      XLSX.utils.aoa_to_sheet(orderSheet),
+      "Chi Tiết Đơn Hàng"
     );
-
-    // Generate Excel file
-    XLSX.writeFile(wb, "BaoCaoDonHang.xlsx");
+  
+    XLSX.writeFile(wb, `Bao_Cao_Don_Hang_${moment().format("DD.MM.YYYY")}.xlsx`);
   };
 
   if (loading || !dashboardData) {
@@ -293,7 +380,7 @@ const OrderManagementDashboard = () => {
       </div>
       {/* Revenue Chart Section */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold mb-4">Doanh thu theo thời gian</h3>
+        <h3 className="text-lg font-semibold mb-4">Doanh số đơn hàng bán được theo thời gian</h3>
         <ResponsiveContainer width="100%" height={400}>
           <ComposedChart
             data={processedData}

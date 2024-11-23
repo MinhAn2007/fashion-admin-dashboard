@@ -27,15 +27,49 @@ const SalesDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState({
-    startDate: moment().subtract(6, "months").startOf("month"),
-    endDate: moment().endOf("month"),
+    startDate: moment().subtract(1, "year").startOf("day"),
+    endDate: moment().endOf("day"),
   });
-
   const API = process.env.REACT_APP_API_ENDPOINT;
 
-  const fetchDashboardData = async (startDate, endDate) => {
+  // Hàm xử lý dữ liệu chung
+  const processDashboardData = (data) => {
+    const groupedByParentId = data.salesByCategory
+      .filter((item) => ![1, 2, 3, 4].includes(item.id))
+      .reduce((acc, item) => {
+        const parentId = item.parent_id;
+        if (parentId && [1, 2, 3, 4].includes(parentId)) {
+          if (!acc[parentId]) {
+            acc[parentId] = { total_quantity: 0 };
+          }
+          acc[parentId].total_quantity +=
+            parseInt(item.total_quantity, 10) || 0;
+        }
+        return acc;
+      }, {});
+
+    const updatedData = data.salesByCategory.map((item) => {
+      if (groupedByParentId[item.id]) {
+        return {
+          ...item,
+          total_quantity:
+            parseInt(item.total_quantity, 10) +
+            groupedByParentId[item.id].total_quantity,
+        };
+      }
+      return item;
+    });
+
+    data.salesByCategory = updatedData.filter((item) =>
+      [1, 2, 3, 4].includes(item.id)
+    );
+
+    return data;
+  };
+
+  // Hàm load dữ liệu lần đầu
+  const initialFetchDashboardData = async (startDate, endDate) => {
     try {
-      setLoading(true);
       const response = await fetch(
         `${API}/api/revenue/dashboard?startDate=${startDate}&endDate=${endDate}`
       );
@@ -43,51 +77,39 @@ const SalesDashboard = () => {
         throw new Error("Failed to fetch dashboard data");
       }
       const data = await response.json();
-      const groupedByParentId = data.salesByCategory
-        .filter((item) => ![1, 2, 3, 4].includes(item.id))
-        .reduce((acc, item) => {
-          const parentId = item.parent_id;
-          if (parentId && [1, 2, 3, 4].includes(parentId)) {
-            if (!acc[parentId]) {
-              acc[parentId] = { total_quantity: 0 };
-            }
-            acc[parentId].total_quantity +=
-              parseInt(item.total_quantity, 10) || 0;
-          }
-          return acc;
-        }, {});
+      const processedData = processDashboardData(data);
+      setDashboardData(processedData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const updatedData = data.salesByCategory.map((item) => {
-        if (groupedByParentId[item.id]) {
-          return {
-            ...item,
-            total_quantity:
-              parseInt(item.total_quantity, 10) +
-              groupedByParentId[item.id].total_quantity,
-          };
-        }
-        return item;
-      });
-      console.log("data", updatedData);
-
-      data.salesByCategory = updatedData.filter((item) =>
-        [1, 2, 3, 4].includes(item.id)
+  // Hàm update dữ liệu khi filter (không có loading)
+  const updateDashboardData = async (startDate, endDate) => {
+    try {
+      const response = await fetch(
+        `${API}/api/revenue/dashboard?startDate=${startDate}&endDate=${endDate}`
       );
-
-      setDashboardData(data);
+      if (!response.ok) {
+        throw new Error("Failed to fetch dashboard data");
+      }
+      const data = await response.json();
+      const processedData = processDashboardData(data);
+      setDashboardData(processedData);
     } catch (err) {
       setError(err.message);
     }
-
-    setLoading(false);
   };
 
+  // useEffect cho lần load đầu tiên
   useEffect(() => {
-    fetchDashboardData(
+    initialFetchDashboardData(
       dateRange.startDate.format("YYYY-MM-DD"),
       dateRange.endDate.format("YYYY-MM-DD")
     );
-  }, [dateRange]);
+  }, []); // Chỉ chạy một lần khi component mount
 
   const processMonthlyRevenueData = () => {
     return (
@@ -120,99 +142,168 @@ const SalesDashboard = () => {
   const exportToExcel = () => {
     if (!dashboardData) return;
 
-    // Prepare Monthly Revenue Data
-    const monthlyRevenueSheet = dashboardData.monthlyRevenue.map((item) => ({
-      Tháng: moment(item.month, "YYYY-MM").format("MMM YYYY"),
-      "Doanh thu (VNĐ)": parseFloat(item.revenue),
-      "Tăng trưởng (%)":
+    const wb = XLSX.utils.book_new();
+
+    const createHeader = (title, dateRange) => [
+      ["BÁO CÁO DOANH THU"],
+      [`${title}`],
+      [`Thời gian: ${dateRange}`],
+      [],
+    ];
+
+    const createFooter = () => [
+      [], 
+      ["Người lập báo cáo:", "", "", "Người duyệt:"],
+      ["", "", "", ""],
+      ["", "", "", ""],
+      [`Ngày lập: ${moment().format("DD/MM/YYYY")}`],
+    ];
+
+    const monthlyRevenueHeader = createHeader(
+      "BÁO CÁO DOANH THU THEO THÁNG",
+      `${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format(
+        "DD/MM/YYYY"
+      )}`
+    );
+
+    const monthlyRevenueData = dashboardData.monthlyRevenue.map((item) => ({
+      Tháng: moment(item.month, "YYYY-MM").format("MM/YYYY"),
+      "Doanh thu (VNĐ)": parseFloat(item.revenue).toLocaleString("vi-VN"),
+      "Tăng trưởng (%)": `${(
         dashboardData.growthRates.find((g) => g.month === item.month)
-          ?.growthRate || 0,
+          ?.growthRate || 0
+      ).toFixed(2)}%`,
     }));
 
-    // Prepare Sales by Category Data
+    const monthlyRevenueSheet = [
+      ...monthlyRevenueHeader,
+      ["Tháng", "Doanh thu (VNĐ)", "Tăng trưởng (%)"],
+      ...monthlyRevenueData.map(Object.values),
+      ...createFooter(),
+    ];
+
+    // 2. Sales by Category Sheet
     const totalSales = dashboardData.salesByCategory.reduce(
       (acc, item) => acc + item.total_quantity,
       0
     );
 
-    const salesByCategorySheet = dashboardData.salesByCategory.map((item) => ({
+    const categoryHeader = createHeader(
+      "BÁO CÁO DOANH THU THEO DANH MỤC",
+      `${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format(
+        "DD/MM/YYYY"
+      )}`
+    );
+
+    const categoryData = dashboardData.salesByCategory.map((item) => ({
       "Danh mục": item.name,
-      "Số lượng": item.total_quantity,
-      "Tỷ lệ (%)": totalSales
-        ? Math.round((item.total_quantity / totalSales) * 100)
-        : 0,
+      "Số lượng": item.total_quantity.toLocaleString("vi-VN"),
+      "Tỷ lệ (%)": `${
+        totalSales ? Math.round((item.total_quantity / totalSales) * 100) : 0
+      }%`,
+      "Doanh thu (VNĐ)": parseFloat(item.total_revenue || 0).toLocaleString(
+        "vi-VN"
+      ),
     }));
 
-    const orderByStatus = dashboardData.ordersByStatusResult.map((item) => ({
+    const categorySheet = [
+      ...categoryHeader,
+      ["Danh mục", "Số lượng", "Tỷ lệ (%)", "Doanh thu (VNĐ)"],
+      ...categoryData.map(Object.values),
+      ...createFooter(),
+    ];
+
+    const statusHeader = createHeader(
+      "BÁO CÁO TÌNH TRẠNG ĐƠN HÀNG",
+      `${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format(
+        "DD/MM/YYYY"
+      )}`
+    );
+
+    const orderStatusData = dashboardData.ordersByStatusResult.map((item) => ({
       "Trạng thái": item.status,
-      "Số lượng": item.total_orders,
-      "Doanh thu": item.total_revenue,
-      "Giá trị trung bình": item.average_order_value,
+      "Số lượng đơn": item.total_orders.toLocaleString("vi-VN"),
+      "Doanh thu (VNĐ)": parseFloat(item.total_revenue).toLocaleString("vi-VN"),
+      "Giá trị TB/đơn": parseFloat(item.average_order_value).toLocaleString(
+        "vi-VN"
+      ),
     }));
 
-    // Prepare Summary Sheet
-    const summarySheet = [
-      {
-        "Chỉ số": "Tổng doanh thu",
-        "Giá trị": formatPrice(dashboardData.stats.totalRevenue),
-      },
-      {
-        "Chỉ số": "Tổng đơn hàng",
-        "Giá trị": dashboardData.stats.totalOrders,
-      },
-      {
-        "Chỉ số": "Giá trị đơn hàng trung bình",
-        "Giá trị": formatPrice(dashboardData.stats.averageOrderValue),
-      },
-      {
-        "Chỉ số": "Tỷ lệ tăng trưởng",
-        "Giá trị": `+${(
+    const statusSheet = [
+      ...statusHeader,
+      ["Trạng thái", "Số lượng đơn", "Doanh thu (VNĐ)", "Giá trị TB/đơn"],
+      ...orderStatusData.map(Object.values),
+      ...createFooter(),
+    ];
+
+    const summaryHeader = createHeader(
+      "TỔNG KẾT BÁO CÁO",
+      `${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format(
+        "DD/MM/YYYY"
+      )}`
+    );
+
+    const summaryData = [
+      ["Chỉ số", "Giá trị"],
+      ["Tổng doanh thu", formatPrice(dashboardData.stats.totalRevenue)],
+      [
+        "Tổng đơn hàng",
+        dashboardData.stats.totalOrders.toLocaleString("vi-VN"),
+      ],
+      [
+        "Giá trị đơn hàng trung bình",
+        formatPrice(dashboardData.stats.averageOrderValue),
+      ],
+      [
+        "Tỷ lệ tăng trưởng",
+        `${(
           dashboardData.growthRates.find(
             (g) => g.month === moment().format("YYYY-MM")
           )?.growthRate || 0
         ).toFixed(2)}%`,
-      },
+      ],
     ];
 
-    // Create workbook
-    const wb = XLSX.utils.book_new();
+    const summarySheet = [...summaryHeader, ...summaryData, ...createFooter()];
+
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(monthlyRevenueSheet),
+      XLSX.utils.aoa_to_sheet(monthlyRevenueSheet),
       "Doanh Thu Theo Tháng"
     );
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(salesByCategorySheet),
+      XLSX.utils.aoa_to_sheet(categorySheet),
       "Doanh Thu Theo Danh Mục"
     );
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(summarySheet),
-      "Tóm Tắt"
+      XLSX.utils.aoa_to_sheet(statusSheet),
+      "Tình Trạng Đơn Hàng"
     );
     XLSX.utils.book_append_sheet(
       wb,
-      XLSX.utils.json_to_sheet(orderByStatus),
-      "Tình Trạng Đơn Hàng"
+      XLSX.utils.aoa_to_sheet(summarySheet),
+      "Tổng Kết"
     );
 
-    // Generate Excel file
     XLSX.writeFile(
       wb,
-      `Bao_Cao_Doanh_Thu_tu_${dateRange.startDate.format(
-        "DD-MM-YYYY"
-      )}_den_${dateRange.endDate.format("DD-MM-YYYY")}.xlsx`
+      `Bao_Cao_Doanh_Thu_${dateRange.startDate.format(
+        "DD.MM.YYYY"
+      )}_${dateRange.endDate.format("DD.MM.YYYY")}.xlsx`
     );
   };
 
   if (loading) return <div>Loading...</div>;
+  if (!dashboardData) return null;
+
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center">
         <OrderDashboardFilter
           onDateRangeChange={({ startDate, endDate }) =>
-            fetchDashboardData(startDate, endDate)
+            updateDashboardData(startDate, endDate)
           }
         />
         <div className="flex items-center space-x-4">
