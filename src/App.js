@@ -18,6 +18,7 @@ import ProductDetails from "./components/products/details/index";
 import AddProductForm from "./components/products/NewProduct";
 import OrderDetail from "./components/orders/details";
 import SalesDashboard from "./components/revenue";
+import PromotionDashboard from "./components/voucher";
 
 // Component bảo vệ các route cần đăng nhập
 const ProtectedRoute = ({ element }) => {
@@ -55,6 +56,7 @@ function App() {
                         <Route path="/revenue" element={<SalesDashboard />} />
                         <Route path="/category" element={<CategoryManagementDashboard />} />
                         <Route path="/reviews" element={<ReviewDashboard />} />
+                        <Route path="/voucher" element={<PromotionDashboard />} />
                       </Routes>
                     </div>
                   </div>
