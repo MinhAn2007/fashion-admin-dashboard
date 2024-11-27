@@ -420,7 +420,7 @@ const OrderManagementDashboard = () => {
                 boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
               }}
               formatter={(value, name) => {
-                if (name === "Doanh thu") return formatPrice(value);
+                if (name === "Thành tiền") return formatPrice(value);
                 if (name === "% Tăng trưởng") return `${value.toFixed(1)}%`;
                 return value;
               }}
@@ -429,7 +429,7 @@ const OrderManagementDashboard = () => {
             <Bar
               yAxisId="left"
               dataKey="total_revenue"
-              name="Doanh thu"
+              name="Thành tiền"
               fill="#2563eb"
               barSize={40}
             />

@@ -223,7 +223,7 @@ const CategoryManagementDashboard = () => {
           color="bg-blue-100"
         />
         <StatsCard
-          title="Tổng doanh thu"
+          title="Tổng Thành tiền"
           value={formatCurrency(stats.totalRevenue)}
           color="bg-green-100"
         />
@@ -252,7 +252,7 @@ const CategoryManagementDashboard = () => {
                   : "bg-gray-100 text-gray-700"
               }`}
             >
-              Doanh thu
+              Thành tiền
             </button>
           </div>
         </div>
@@ -374,7 +374,7 @@ const CategoryManagementDashboard = () => {
                       className="flex items-center cursor-pointer"
                       onClick={() => handleSort("revenue")}
                     >
-                      Doanh thu
+                      Thành tiền
                       <ArrowUpDown className="w-4 h-4 ml-1" />
                     </div>
                   </th>
