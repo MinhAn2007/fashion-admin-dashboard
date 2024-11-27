@@ -36,11 +36,11 @@ const ProductDashboard = () => {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [currentPage, setCurrentPage] = useState(1);
   const [chartFilter, setChartFilter] = useState("sales");
-  const [chartTimeRange, setChartTimeRange] = useState("all");
   const navigate = useNavigate();
 
   const [productStats, setProductStats] = useState({});
   const [revenueStats, setRevenueStats] = useState([]);
+  const [inventory, setInventory] = useState([]);
   const [salesByTime, setSalesByTime] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -49,8 +49,8 @@ const ProductDashboard = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [dateRange, setDateRange] = useState(
     moment.range(
-      moment().subtract(1, 'year').startOf('day'), 
-      moment().endOf('day')
+      moment().subtract(1, "year").startOf("day"),
+      moment().endOf("day")
     )
   );
 
@@ -59,8 +59,16 @@ const ProductDashboard = () => {
     try {
       setLoading(true);
       const [productRes, revenueRes] = await Promise.all([
-        fetch(`${API_ENDPOINT}/api/productStats?startDate=${startDate.format('YYYY-MM-DD')}&endDate=${endDate.format('YYYY-MM-DD')}`),
-        fetch(`${API_ENDPOINT}/api/productRevenueStats?startDate=${startDate.format('YYYY-MM-DD')}&endDate=${endDate.format('YYYY-MM-DD')}`)
+        fetch(
+          `${API_ENDPOINT}/api/productStats?startDate=${startDate.format(
+            "YYYY-MM-DD"
+          )}&endDate=${endDate.format("YYYY-MM-DD")}`
+        ),
+        fetch(
+          `${API_ENDPOINT}/api/productRevenueStats?startDate=${startDate.format(
+            "YYYY-MM-DD"
+          )}&endDate=${endDate.format("YYYY-MM-DD")}`
+        ),
       ]);
 
       if (!productRes.ok || !revenueRes.ok) {
@@ -73,6 +81,7 @@ const ProductDashboard = () => {
       setProductStats(productData);
       setRevenueStats(revenueData.productRevenueStats);
       setSalesByTime(revenueData.salesByTimeQuery);
+      setInventory(revenueData.getInventory);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -110,22 +119,23 @@ const ProductDashboard = () => {
       setProductStats(productData);
       setRevenueStats(revenueData.productRevenueStats);
       setSalesByTime(revenueData.salesByTimeQuery);
+      setInventory(revenueData.getInventory);
     } catch (err) {
       setError(err.message);
     }
   };
   const exportToExcel = () => {
     if (!revenueStats || !productStats || !salesByTime) return;
-  
+
     const wb = XLSX.utils.book_new();
-  
+
     const createHeader = (title, dateRange) => [
       ["BÁO CÁO QUẢN LÝ SẢN PHẨM"],
       [`${title}`],
-      [`Thời gian: ${dateRange || moment().format('DD/MM/YYYY')}`],
+      [`Thời gian: ${dateRange || moment().format("DD/MM/YYYY")}`],
       [],
     ];
-  
+
     const createFooter = () => [
       [],
       ["Người lập báo cáo:", "", "", "Người duyệt:"],
@@ -133,128 +143,179 @@ const ProductDashboard = () => {
       ["", "", "", ""],
       [`Ngày lập: ${moment().format("DD/MM/YYYY")}`],
     ];
-  
+
     // 1. Tổng quan sản phẩm
     const summaryHeader = createHeader("TỔNG QUAN SẢN PHẨM");
-    
+
     const summaryData = [
       ["Chỉ số", "Giá trị"],
       ["Tổng số sản phẩm", revenueStats.length.toString()],
-      ["Tổng doanh thu", formatPrice(revenueStats.reduce((sum, item) => sum + item.revenue, 0))],
-      ["Tổng số lượng bán", revenueStats.reduce((sum, item) => sum + item.sold_quantity, 0).toString()],
-      ["Tổng tồn kho", revenueStats.reduce((sum, item) => sum + item.stock_quantity, 0).toString()]
+      [
+        "Tổng thành tiền",
+        formatPrice(revenueStats.reduce((sum, item) => sum + item.revenue, 0)),
+      ],
+      [
+        "Tổng số lượng bán",
+        revenueStats
+          .reduce((sum, item) => sum + item.sold_quantity, 0)
+          .toString(),
+      ],
+      [
+        "Tổng tồn kho",
+        revenueStats
+          .reduce((sum, item) => sum + item.stock_quantity, 0)
+          .toString(),
+      ],
     ];
-  
-    const summarySheet = [
-      ...summaryHeader,
-      ...summaryData,
-      ...createFooter()
-    ];
-  
+
+    const summarySheet = [...summaryHeader, ...summaryData, ...createFooter()];
+
     // 2. Báo cáo top sản phẩm tồn kho
     const stockHeader = createHeader("BÁO CÁO TOP SẢN PHẨM TỒN KHO");
-  
+
     const stockData = mostStock.map((item, index) => ({
       "Xếp hạng": index + 1,
       "Tên sản phẩm": item.name,
       "Số lượng tồn": item.stock_quantity,
-      "Giá trị tồn": formatPrice(item.stock_quantity * item.price)
+      "Giá trị tồn": formatPrice(item.stock_quantity * item.price),
     }));
-  
+
     const stockSheet = [
       ...stockHeader,
       ["Xếp hạng", "Tên sản phẩm", "Số lượng tồn", "Giá trị tồn"],
       ...stockData.map(Object.values),
-      ...createFooter()
+      ...createFooter(),
     ];
-  
+
     // 3. Báo cáo top doanh thu
-    const revenueHeader = createHeader("BÁO CÁO TOP DOANH THU");
-  
+    const revenueHeader = createHeader("BÁO CÁO TOP THÀNH TIỀN");
+
     const revenueData = mostRevenue.map((item, index) => ({
       "Xếp hạng": index + 1,
       "Tên sản phẩm": item.name,
       "Số lượng bán": item.sold_quantity,
-      "Doanh thu": formatPrice(item.revenue)
+      "Thành tiền": formatPrice(item.revenue),
     }));
-  
+
     const revenueSheet = [
       ...revenueHeader,
-      ["Xếp hạng", "Tên sản phẩm", "Số lượng bán", "Doanh thu"],
+      ["Xếp hạng", "Tên sản phẩm", "Số lượng bán", "Thành tiền"],
       ...revenueData.map(Object.values),
-      ...createFooter()
+      ...createFooter(),
     ];
-  
+
     // 4. Báo cáo bán hàng theo thời gian
     const timeHeader = createHeader("BÁO CÁO BÁN HÀNG THEO THỜI GIAN");
-  
-    const timeData = salesByTime.map(item => ({
+
+    const timeData = salesByTime.map((item) => ({
       "Mã sản phẩm": item.product_id,
       "Tên sản phẩm": item.product_name,
       "Số lượng bán": item.total_sold_quantity,
       "Ngày bán đầu": moment(item.first_sale_date).format("DD/MM/YYYY"),
       "Ngày bán cuối": moment(item.last_sale_date).format("DD/MM/YYYY"),
-      "Doanh thu": formatPrice(item.total_revenue)
+      "Thành tiền": formatPrice(item.total_revenue),
     }));
-  
+
     const timeSheet = [
       ...timeHeader,
-      ["Mã sản phẩm", "Tên sản phẩm", "Số lượng bán", "Ngày bán đầu", "Ngày bán cuối", "Doanh thu"],
+      [
+        "Mã sản phẩm",
+        "Tên sản phẩm",
+        "Số lượng bán",
+        "Ngày bán đầu",
+        "Ngày bán cuối",
+        "Doanh thu",
+      ],
       ...timeData.map(Object.values),
-      ...createFooter()
+      ...createFooter(),
     ];
-  
+
     // 5. Chi tiết sản phẩm
     const detailHeader = createHeader("CHI TIẾT SẢN PHẨM");
-  
-    const detailData = revenueStats.map(product => ({
+
+    const detailData = revenueStats.map((product) => ({
       "Mã sản phẩm": product.id,
       "Tên sản phẩm": product.name,
       "Tồn kho": product.stock_quantity,
       "Đã bán": product.sold_quantity,
       "Doanh thu": formatPrice(product.revenue),
-      "Trạng thái": product.status === 1 ? "Đang kinh doanh" : "Ngừng kinh doanh"
+      "Trạng thái":
+        product.status === 1 ? "Đang kinh doanh" : "Ngừng kinh doanh",
     }));
-  
+
     const detailSheet = [
       ...detailHeader,
-      ["Mã sản phẩm", "Tên sản phẩm", "Tồn kho", "Đã bán", "Doanh thu", "Trạng thái"],
+      [
+        "Mã sản phẩm",
+        "Tên sản phẩm",
+        "Tồn kho",
+        "Đã bán",
+        "Doanh thu",
+        "Trạng thái",
+      ],
       ...detailData.map(Object.values),
-      ...createFooter()
+      ...createFooter(),
     ];
-  
+
+    //6. Báo cáo hàng đã nhập
+
+    const inventoryHeader = createHeader("BÁO CÁO HÀNG ĐÃ NHẬP THEO THỜI GIAN");
+
+    const inventoryData = inventory.map((item) => ({
+      "Mã sản phẩm": item.id,
+      "Tên sản phẩm": item.name,
+      "Số lượng nhập": item.total_stock,
+      "Ngày nhập": moment(item.created_at).format("DD/MM/YYYY"),
+    }));
+
+    const inventorySheet = [
+      ...inventoryHeader,
+      ["Mã sản phẩm", "Tên sản phẩm", "Số lượng nhập", "Ngày nhập"],
+      ...inventoryData.map(Object.values),
+      ...createFooter(),
+    ];
+
     // Thêm các sheet vào workbook
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.aoa_to_sheet(summarySheet),
       "Tổng Quan"
     );
-    
+
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.aoa_to_sheet(stockSheet),
       "Top Tồn Kho"
     );
-    
+
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.aoa_to_sheet(revenueSheet),
       "Top Doanh Thu"
     );
-    
+
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.aoa_to_sheet(timeSheet),
       "Bán Theo Thời Gian"
     );
-    
+
     XLSX.utils.book_append_sheet(
       wb,
       XLSX.utils.aoa_to_sheet(detailSheet),
       "Chi Tiết Sản Phẩm"
     );
-  
-    XLSX.writeFile(wb, `Bao_Cao_San_Pham_${moment().format("DD.MM.YYYY")}.xlsx`);
+
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.aoa_to_sheet(inventorySheet),
+      "Hàng Đã Nhập"
+    );
+
+    XLSX.writeFile(
+      wb,
+      `Bao_Cao_San_Pham_${moment().format("DD.MM.YYYY")}.xlsx`
+    );
   };
 
   const filterProducts = (items) => {
@@ -344,6 +405,7 @@ const ProductDashboard = () => {
       </div>
     );
   }
+  console.log("inventory", inventory);
 
   return (
     <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
@@ -371,7 +433,41 @@ const ProductDashboard = () => {
           </Link>
         </div>
       </div>
-
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold">
+            Biểu đồ số lượng sản phẩm đã bán theo thời gian
+          </h3>
+        </div>
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart
+            data={productStats.salesByTime}
+            layout="vertical"
+            margin={{ top: 6, right: 30, left: 100, bottom: 5 }}
+          >
+            <CartesianGrid />
+            <XAxis
+              type="number"
+              tickFormatter={(value) => formatPrice(value)}
+            />
+            <YAxis dataKey="period" type="category" />
+            <Tooltip
+              formatter={(value) => [
+                formatPrice(value),
+                chartFilter !== "revenue" ? "Quantity" : "Revenue",
+              ]}
+            />
+            <Legend />
+            <Bar
+              dataKey={
+                chartFilter !== "revenue" ? "total_quantity" : "total_revenue"
+              }
+              fill={chartFilter !== "revenue" ? "#82ca9d" : "#8884d8"}
+              name={chartFilter !== "revenue" ? "Quantity" : "Revenue"}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-6">
@@ -424,61 +520,6 @@ const ProductDashboard = () => {
       </div>
 
       {/* Charts */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold">
-            Biểu đồ {chartFilter === "sales" ? "doanh số" : "Thành tiền"}
-          </h3>
-          <div className="flex gap-4">
-            <select
-              className="border rounded-lg px-3 py-2"
-              value={chartFilter}
-              onChange={(e) => setChartFilter(e.target.value)}
-            >
-              <option value="sales">Doanh số</option>
-              <option value="revenue">Thành tiền</option>
-            </select>
-            <select
-              className="border rounded-lg px-3 py-2"
-              value={chartTimeRange}
-              onChange={(e) => setChartTimeRange(e.target.value)}
-            >
-              <option value="week">Tuần này</option>
-              <option value="month">Tháng này</option>
-              <option value="year">Năm nay</option>
-              <option value="all">Tất cả</option>
-            </select>
-          </div>
-        </div>
-        <ResponsiveContainer width="100%" height={400}>
-          <BarChart
-            data={productStats.salesByTime}
-            layout="vertical"
-            margin={{ top: 6, right: 30, left: 100, bottom: 5 }}
-          >
-            <CartesianGrid />
-            <XAxis
-              type="number"
-              tickFormatter={(value) => formatPrice(value)}
-            />
-            <YAxis dataKey="period" type="category" />
-            <Tooltip
-              formatter={(value) => [
-                formatPrice(value),
-                chartFilter !== "revenue" ? "Quantity" : "Revenue",
-              ]}
-            />
-            <Legend />
-            <Bar
-              dataKey={
-                chartFilter !== "revenue" ? "total_quantity" : "total_revenue"
-              }
-              fill={chartFilter !== "revenue" ? "#82ca9d" : "#8884d8"}
-              name={chartFilter !== "revenue" ? "Quantity" : "Revenue"}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
 
       {/* Products Table */}
       <div className="bg-white rounded-lg shadow-sm">
