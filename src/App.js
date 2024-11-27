@@ -19,6 +19,7 @@ import AddProductForm from "./components/products/NewProduct";
 import OrderDetail from "./components/orders/details";
 import SalesDashboard from "./components/revenue";
 import PromotionDashboard from "./components/voucher";
+import BotpressAccess from "./components/chatbot/index,";
 
 // Component bảo vệ các route cần đăng nhập
 const ProtectedRoute = ({ element }) => {
@@ -57,6 +58,7 @@ function App() {
                         <Route path="/category" element={<CategoryManagementDashboard />} />
                         <Route path="/reviews" element={<ReviewDashboard />} />
                         <Route path="/voucher" element={<PromotionDashboard />} />
+                        <Route path="/chatbot" element={<BotpressAccess />} />
                       </Routes>
                     </div>
                   </div>

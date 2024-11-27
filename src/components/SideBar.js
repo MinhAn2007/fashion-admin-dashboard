@@ -65,6 +65,11 @@ const Sidebar = () => {
             <FiShoppingBag className="mr-2" /> Khuyến mãi
           </li>
         </Link>
+        <Link to="/chatbot" className="flex items-center mb-4">
+          <li className="flex items-center">
+            <TbMessage className="mr-2" /> Chat bot
+          </li>
+        </Link>
       </ul>
       <button
         onClick={handleLogout}
