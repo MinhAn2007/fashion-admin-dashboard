@@ -26,6 +26,21 @@ const BotpressAccess = () => {
       <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">
         Hướng Dẫn Truy Cập Botpress
       </h2>
+      <div className="text-sm text-gray-600 mb-4">
+        <p>
+          Click vào{" "}
+          <a
+            href={dashboardUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 underline font-semibold transition duration-200 ease-in-out hover:text-blue-700 hover:underline-offset-4"
+          >
+            đây
+          </a>{" "}
+          để xem tổng quát thông tin của chatbot. Thông tin đăng nhập vui lòng
+          liên hệ Admin An để được cung cấp.
+        </p>
+      </div>
 
       <div className="space-y-4 text-gray-700">
         <p className="text-sm leading-relaxed">
