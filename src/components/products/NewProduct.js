@@ -19,7 +19,7 @@ const AddProductForm = () => {
   const [skus, setSkus] = useState([
     {
       size_attribute_id: "M",
-      color_attribute_id: "Màu đỏ",
+      color_attribute_id: "Đen",
       sku: "",
       price: "",
       quantity: "",
@@ -111,7 +111,7 @@ const AddProductForm = () => {
       ...prev,
       {
         size_attribute_id: "M",
-        color_attribute_id: "Màu đỏ",
+        color_attribute_id: "Đen",
         sku: "",
         price: "",
         quantity: "",
@@ -191,7 +191,7 @@ const AddProductForm = () => {
       setSkus([
         {
           size_attribute_id: "M",
-          color_attribute_id: "Màu đỏ",
+          color_attribute_id: "Đen",
           sku: "",
           price: "",
           quantity: "",
@@ -322,9 +322,16 @@ const AddProductForm = () => {
                       onChange={(e) => handleSkuChange(index, e)}
                       className="w-full border rounded-md px-3 py-2"
                     >
-                      <option value="Màu đỏ">Màu đỏ</option>
-                      <option value="Màu xanh">Màu xanh</option>
-                      <option value="Màu vàng">Màu vàng</option>
+                      <option value="Đỏ">Màu đỏ</option>
+                      <option value="Xanh">Màu xanh</option>
+                      <option value="Vàng">Màu vàng</option>
+                      <option value="Trắng">Màu trắng</option>
+                      <option value="Đen">Màu đen</option>
+                      <option value="Hồng">Màu hồng</option>
+                      <option value="Xám">Màu xám</option>
+                      <option value="Nâu">Màu nâu</option>
+                      <option value="Tím">Màu tím</option>
+                      <option value="Cam">Màu cam</option>
                     </select>
                   </div>
 
