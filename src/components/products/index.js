@@ -385,7 +385,7 @@ const ProductDashboard = () => {
         throw new Error("Failed to delete product");
       }
       alert("Xóa sản phẩm thành công");
-      fetchData();
+      fetchData(dateRange.start, dateRange.end);
     } catch (error) {
       console.error("Error deleting product:", error);
     }
