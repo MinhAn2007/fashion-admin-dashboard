@@ -25,7 +25,7 @@ import { formatPrice } from "../../utils/FormatPrice";
 import { Link } from "react-router-dom";
 import OrderDashboardFilter from "../../utils/Filter";
 import moment from "moment";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 const ITEMS_PER_PAGE = 10;
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884d8"];
@@ -193,148 +193,222 @@ const OrderManagementDashboard = () => {
   const exportToExcel = () => {
     if (!dashboardData) return;
   
-    const wb = XLSX.utils.book_new();
+    // Create a new workbook
+    const wb = new ExcelJS.Workbook();
   
-    const createHeader = (title, dateRange) => [
-      ["BÁO CÁO QUẢN LÝ ĐƠN HÀNG"],
-      [`${title}`],
-      [`Thời gian: ${dateRange || moment().format('DD/MM/YYYY')}`],
-      [],
-    ];
+    // Utility function to create a styled header
+    const createStyledHeader = (worksheet, title, dateRange) => {
+      // Merge cells for main title and center
+      worksheet.mergeCells('A1:E4');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = "BÁO CÁO QUẢN LÝ ĐƠN HÀNG";
+      titleCell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle', 
+        wrapText: true 
+      };
+      titleCell.font = { 
+        bold: true, 
+        size: 16, 
+        color: { argb: 'FFFFFF' } 
+      };
+      titleCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '4472C4' }
+      };
   
-    const createFooter = () => [
-      [],
-      ["Người lập báo cáo:", "", "", "Người duyệt:"],
-      ["", "", "", ""],
-      ["", "", "", ""],
-      [`Ngày lập: ${moment().format("DD/MM/YYYY")}`],
-    ];
+      // Specific report title
+      worksheet.mergeCells('A5:E5');
+      const specificTitleCell = worksheet.getCell('A5');
+      specificTitleCell.value = title;
+      specificTitleCell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle' 
+      };
+      specificTitleCell.font = { 
+        bold: true, 
+        size: 14 
+      };
   
-    // 1. Báo cáo doanh số theo thời gian
-    const revenueHeader = createHeader(
-      "BÁO CÁO DOANH SỐ THEO THỜI GIAN"
-    );
+      // Date range
+      worksheet.mergeCells('A6:E6');
+      const dateCell = worksheet.getCell('A6');
+      dateCell.value = `Thời gian: ${dateRange || moment().format('DD/MM/YYYY')}`;
+      dateCell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle' 
+      };
+      dateCell.font = { italic: true };
+    };
   
-    const revenueData = processedData.map((item) => ({
-      "Tháng": item.month,
-      "Doanh thu (VNĐ)": formatPrice(item.total_revenue),
-      "Tăng trưởng (%)": `${item.growth.toFixed(1)}%`
-    }));
+    // Utility function to create a styled data header
+    const createDataHeader = (worksheet, headers) => {
+      headers.forEach((header, index) => {
+        const cell = worksheet.getCell(8, index + 1);
+        cell.value = header;
+        cell.alignment = { 
+          horizontal: 'center', 
+          vertical: 'middle' 
+        };
+        cell.font = { 
+          bold: true, 
+          color: { argb: 'FFFFFF' } 
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: '4472C4' }
+        };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    };
   
-    const revenueSheet = [
-      ...revenueHeader,
-      ["Tháng", "Doanh thu (VNĐ)", "Tăng trưởng (%)"],
-      ...revenueData.map(Object.values),
-      ...createFooter()
-    ];
+    // Utility function to add data rows with borders
+    const addDataRows = (worksheet, data) => {
+      data.forEach((row, rowIndex) => {
+        row.forEach((value, colIndex) => {
+          const cell = worksheet.getCell(9 + rowIndex, colIndex + 1);
+          cell.value = value;
+          cell.alignment = { 
+            horizontal: 'center', 
+            vertical: 'middle' 
+          };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+      });
+    };
   
-    // 2. Báo cáo phương thức thanh toán
-    const paymentHeader = createHeader(
-      "BÁO CÁO PHƯƠNG THỨC THANH TOÁN"
-    );
+    // Utility function to create footer
+    const createFooter = (worksheet, startRow) => {
+      const footerRows = [
+        [],
+        ["Người lập báo cáo:", "", "", "", "Người duyệt:"],
+        ["", "", "", "", ""],
+        ["", "", "", "", ""],
+        [`Ngày lập: ${moment().format("DD/MM/YYYY")}`]
+      ];
   
-    const paymentData = dashboardData.paymentStats.map((item) => ({
-      "Phương thức": item.name,
-      "Tỷ lệ (%)": `${item.value}%`,
-      "Số lượng đơn": item.count || 0
-    }));
+      footerRows.forEach((footerRow, index) => {
+        footerRow.forEach((value, colIndex) => {
+          const cell = worksheet.getCell(startRow + index, colIndex + 1);
+          cell.value = value;
+          cell.alignment = { 
+            horizontal: 'center', 
+            vertical: 'middle' 
+          };
+        });
+      });
+    };
   
-    const paymentSheet = [
-      ...paymentHeader,
-      ["Phương thức", "Tỷ lệ (%)", "Số lượng đơn"],
-      ...paymentData.map(Object.values),
-      ...createFooter()
-    ];
+    // 1. Báo cáo doanh số theo thời gian (Revenue by Time)
+    const revenueSheet = wb.addWorksheet('Doanh Số');
+    createStyledHeader(revenueSheet, "BÁO CÁO DOANH SỐ THEO THỜI GIAN");
   
-    // 3. Báo cáo trạng thái đơn hàng
-    const statusHeader = createHeader(
-      "BÁO CÁO TRẠNG THÁI ĐƠN HÀNG"
-    );
+    const revenueHeaders = ["Tháng", "Doanh thu (VNĐ)", "Tăng trưởng (%)"];
+    createDataHeader(revenueSheet, revenueHeaders);
   
-    const statusData = orderStatusStats.map((item) => ({
-      "Trạng thái": item.status,
-      "Số lượng": item.count,
-      "Tỷ lệ (%)": `${((item.count / filteredOrders.length) * 100).toFixed(1)}%`
-    }));
+    const revenueData = processedData.map((item) => [
+      item.month,
+      formatPrice(item.total_revenue),
+      `${item.growth.toFixed(1)}%`
+    ]);
+    addDataRows(revenueSheet, revenueData);
+    createFooter(revenueSheet, revenueData.length + 10);
   
-    const statusSheet = [
-      ...statusHeader,
-      ["Trạng thái", "Số lượng", "Tỷ lệ (%)"],
-      ...statusData.map(Object.values),
-      ...createFooter()
-    ];
+    // 2. Báo cáo phương thức thanh toán (Payment Methods)
+    const paymentSheet = wb.addWorksheet('Phương Thức Thanh Toán');
+    createStyledHeader(paymentSheet, "BÁO CÁO PHƯƠNG THỨC THANH TOÁN");
   
-    // 4. Tổng kết báo cáo
-    const summaryHeader = createHeader(
-      "TỔNG KẾT BÁO CÁO"
-    );
+    const paymentHeaders = ["Phương thức", "Tỷ lệ (%)", "Số lượng đơn"];
+    createDataHeader(paymentSheet, paymentHeaders);
+  
+    const paymentData = dashboardData.paymentStats.map((item) => [
+      item.name,
+      `${item.value}%`,
+      item.count || 0
+    ]);
+    addDataRows(paymentSheet, paymentData);
+    createFooter(paymentSheet, paymentData.length + 10);
+  
+    // 3. Báo cáo trạng thái đơn hàng (Order Status)
+    const statusSheet = wb.addWorksheet('Trạng Thái Đơn Hàng');
+    createStyledHeader(statusSheet, "BÁO CÁO TRẠNG THÁI ĐƠN HÀNG");
+  
+    const statusHeaders = ["Trạng thái", "Số lượng", "Tỷ lệ (%)"];
+    createDataHeader(statusSheet, statusHeaders);
+  
+    const statusData = orderStatusStats.map((item) => [
+      item.status,
+      item.count,
+      `${((item.count / filteredOrders.length) * 100).toFixed(1)}%`
+    ]);
+    addDataRows(statusSheet, statusData);
+    createFooter(statusSheet, statusData.length + 10);
+  
+    // 4. Tổng kết báo cáo (Summary)
+    const summarySheet = wb.addWorksheet('Tổng Kết');
+    createStyledHeader(summarySheet, "TỔNG KẾT BÁO CÁO");
+  
+    const summaryHeaders = ["Chỉ số", "Giá trị"];
+    createDataHeader(summarySheet, summaryHeaders);
   
     const summaryData = [
-      ["Chỉ số", "Giá trị"],
       ["Tổng doanh số", formatPrice(dashboardData.stats.totalRevenue)],
       ["Tỷ lệ hoàn trả", `${dashboardData.stats.returnRate}%`],
       ["Đơn hàng chờ xác nhận", dashboardData.stats.pendingOrders.toString()],
       ["Tổng số đơn hàng", dashboardData.stats.totalOrders.toString()]
     ];
+    addDataRows(summarySheet, summaryData);
+    createFooter(summarySheet, summaryData.length + 10);
   
-    const summarySheet = [
-      ...summaryHeader,
-      ...summaryData,
-      ...createFooter()
-    ];
+    // 5. Chi tiết đơn hàng (Order Details)
+    const orderSheet = wb.addWorksheet('Chi Tiết Đơn Hàng');
+    createStyledHeader(orderSheet, "CHI TIẾT ĐƠN HÀNG");
   
-    // 5. Chi tiết đơn hàng
-    const orderHeader = createHeader(
-      "CHI TIẾT ĐƠN HÀNG"
-    );
+    const orderHeaders = ["Mã đơn hàng", "Khách hàng", "Trạng thái", "Tổng tiền", "Ngày tạo"];
+    createDataHeader(orderSheet, orderHeaders);
   
-    const orderData = filteredOrders.map(order => ({
-      "Mã đơn hàng": order.id,
-      "Khách hàng": order.customerName,
-      "Trạng thái": STATUS_DISPLAY_MAP[order.status] || order.status,
-      "Tổng tiền": formatPrice(order.total),
-      "Ngày tạo": moment(order.createdAt).format("DD/MM/YYYY")
-    }));
+    const orderData = filteredOrders.map(order => [
+      order.id,
+      order.customerName,
+      STATUS_DISPLAY_MAP[order.status] || order.status,
+      formatPrice(order.total),
+      moment(order.createdAt).format("DD/MM/YYYY")
+    ]);
+    addDataRows(orderSheet, orderData);
+    createFooter(orderSheet, orderData.length + 10);
   
-    const orderSheet = [
-      ...orderHeader,
-      ["Mã đơn hàng", "Khách hàng", "Trạng thái", "Tổng tiền", "Ngày tạo"],
-      ...orderData.map(Object.values),
-      ...createFooter()
-    ];
+    // Auto-adjust column widths for readability
+    [summarySheet, revenueSheet, paymentSheet, statusSheet, orderSheet].forEach(sheet => {
+      sheet.columns.forEach(column => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 10;
+          maxLength = Math.max(maxLength, columnLength);
+        });
+        column.width = maxLength < 10 ? 10 : maxLength + 2;
+      });
+    });
   
-    // Thêm các sheet vào workbook
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(summarySheet),
-      "Tổng Kết"
-    );
-    
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(revenueSheet),
-      "Doanh Số"
-    );
-    
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(paymentSheet),
-      "Phương Thức Thanh Toán"
-    );
-    
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(statusSheet),
-      "Trạng Thái Đơn Hàng"
-    );
-    
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(orderSheet),
-      "Chi Tiết Đơn Hàng"
-    );
-  
-    XLSX.writeFile(wb, `Bao_Cao_Don_Hang_${moment().format("DD.MM.YYYY")}.xlsx`);
+    // Save the workbook
+    wb.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Bao_Cao_Don_Hang_${moment().format("DD.MM.YYYY")}.xlsx`;
+      link.click();
+    });
   };
 
   if (loading || !dashboardData) {

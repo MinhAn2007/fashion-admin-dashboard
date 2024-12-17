@@ -18,7 +18,7 @@ import {
 import StatsCard from "../StatsCard";
 import OrderDashboardFilter from "../../utils/Filter";
 import { formatPrice } from "../../utils/FormatPrice";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"];
 
@@ -141,110 +141,193 @@ const SalesDashboard = () => {
   if (error) return <div>Error: {error}</div>;
   const exportToExcel = () => {
     if (!dashboardData) return;
-
-    const wb = XLSX.utils.book_new();
-
-    const createHeader = (title, dateRange) => [
-      ["BÁO CÁO DOANH THU"],
-      [`${title}`],
-      [`Thời gian: ${dateRange}`],
-      [],
-    ];
-
-    const createFooter = () => [
-      [], 
-      ["Người lập báo cáo:", "", "", "Người duyệt:"],
-      ["", "", "", ""],
-      ["", "", "", ""],
-      [`Ngày lập: ${moment().format("DD/MM/YYYY")}`],
-    ];
-
-    const monthlyRevenueHeader = createHeader(
-      "BÁO CÁO DOANH THU THEO THÁNG",
-      `${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format(
-        "DD/MM/YYYY"
-      )}`
+  
+    // Create a new workbook
+    const wb = new ExcelJS.Workbook();
+  
+    // Utility function to create a styled header
+    const createStyledHeader = (worksheet, title, dateRange) => {
+      // Merge cells for title and center
+      worksheet.mergeCells('A1:D4');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = title;
+      titleCell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle', 
+        wrapText: true 
+      };
+      titleCell.font = { 
+        bold: true, 
+        size: 16, 
+        color: { argb: 'FFFFFF' } 
+      };
+      titleCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '4472C4' }
+      };
+  
+      // Date range
+      worksheet.mergeCells('A5:D5');
+      const dateCell = worksheet.getCell('A5');
+      dateCell.value = `Thời gian: ${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format("DD/MM/YYYY")}`;
+      dateCell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle' 
+      };
+      dateCell.font = { italic: true };
+    };
+  
+    // Utility function to create a styled data header
+    const createDataHeader = (worksheet, headers) => {
+      headers.forEach((header, index) => {
+        const cell = worksheet.getCell(7, index + 1);
+        cell.value = header;
+        cell.alignment = { 
+          horizontal: 'center', 
+          vertical: 'middle' 
+        };
+        cell.font = { 
+          bold: true, 
+          color: { argb: 'FFFFFF' } 
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: '4472C4' }
+        };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    };
+  
+    // Utility function to add data rows with borders
+    const addDataRows = (worksheet, data) => {
+      data.forEach((row, rowIndex) => {
+        row.forEach((value, colIndex) => {
+          const cell = worksheet.getCell(8 + rowIndex, colIndex + 1);
+          cell.value = value;
+          cell.alignment = { 
+            horizontal: 'center', 
+            vertical: 'middle' 
+          };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+      });
+    };
+  
+    // Utility function to create footer
+    const createFooter = (worksheet, startRow) => {
+      const footerRows = [
+        [],
+        ["Người lập báo cáo:", "", "", "Người duyệt:"],
+        ["", "", "", ""],
+        ["", "", "", ""],
+        [`Ngày lập: ${moment().format("DD/MM/YYYY")}`]
+      ];
+  
+      footerRows.forEach((footerRow, index) => {
+        footerRow.forEach((value, colIndex) => {
+          const cell = worksheet.getCell(startRow + index, colIndex + 1);
+          cell.value = value;
+          cell.alignment = { 
+            horizontal: 'center', 
+            vertical: 'middle' 
+          };
+        });
+      });
+    };
+  
+    // 1. Monthly Revenue Sheet
+    const monthlyRevenueSheet = wb.addWorksheet('Doanh Thu Theo Tháng');
+    createStyledHeader(
+      monthlyRevenueSheet, 
+      "BÁO CÁO DOANH THU THEO THÁNG", 
+      dateRange
     );
-
-    const monthlyRevenueData = dashboardData.monthlyRevenue.map((item) => ({
-      Tháng: moment(item.month, "YYYY-MM").format("MM/YYYY"),
-      "Doanh thu (VNĐ)": parseFloat(item.revenue).toLocaleString("vi-VN"),
-      "Tăng trưởng (%)": `${(
+  
+    const monthlyRevenueHeaders = ["Tháng", "Doanh thu (VNĐ)", "Tăng trưởng (%)"];
+    createDataHeader(monthlyRevenueSheet, monthlyRevenueHeaders);
+  
+    const monthlyRevenueData = dashboardData.monthlyRevenue.map((item) => [
+      moment(item.month, "YYYY-MM").format("MM/YYYY"),
+      parseFloat(item.revenue).toLocaleString("vi-VN"),
+      `${(
         dashboardData.growthRates.find((g) => g.month === item.month)
           ?.growthRate || 0
-      ).toFixed(2)}%`,
-    }));
-
-    const monthlyRevenueSheet = [
-      ...monthlyRevenueHeader,
-      ["Tháng", "Doanh thu (VNĐ)", "Tăng trưởng (%)"],
-      ...monthlyRevenueData.map(Object.values),
-      ...createFooter(),
-    ];
-
+      ).toFixed(2)}%`
+    ]);
+    addDataRows(monthlyRevenueSheet, monthlyRevenueData);
+    createFooter(monthlyRevenueSheet, monthlyRevenueData.length + 9);
+  
     // 2. Sales by Category Sheet
     const totalSales = dashboardData.salesByCategory.reduce(
       (acc, item) => acc + item.total_quantity,
       0
     );
-
-    const categoryHeader = createHeader(
-      "BÁO CÁO DOANH THU THEO DANH MỤC",
-      `${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format(
-        "DD/MM/YYYY"
-      )}`
+  
+    const categorySheet = wb.addWorksheet('Doanh Thu Theo Danh Mục');
+    createStyledHeader(
+      categorySheet, 
+      "BÁO CÁO DOANH THU THEO DANH MỤC", 
+      dateRange
     );
-
-    const categoryData = dashboardData.salesByCategory.map((item) => ({
-      "Danh mục": item.name,
-      "Số lượng": item.total_quantity.toLocaleString("vi-VN"),
-      "Tỷ lệ (%)": `${
+  
+    const categoryHeaders = ["Danh mục", "Số lượng", "Tỷ lệ (%)", "Doanh thu (VNĐ)"];
+    createDataHeader(categorySheet, categoryHeaders);
+  
+    const categoryData = dashboardData.salesByCategory.map((item) => [
+      item.name,
+      item.total_quantity.toLocaleString("vi-VN"),
+      `${
         totalSales ? Math.round((item.total_quantity / totalSales) * 100) : 0
       }%`,
-      "Doanh thu (VNĐ)": parseFloat(item.total_revenue || 0).toLocaleString(
-        "vi-VN"
-      ),
-    }));
-
-    const categorySheet = [
-      ...categoryHeader,
-      ["Danh mục", "Số lượng", "Tỷ lệ (%)", "Doanh thu (VNĐ)"],
-      ...categoryData.map(Object.values),
-      ...createFooter(),
-    ];
-
-    const statusHeader = createHeader(
-      "BÁO CÁO TÌNH TRẠNG ĐƠN HÀNG",
-      `${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format(
-        "DD/MM/YYYY"
-      )}`
+      parseFloat(item.total_revenue || 0).toLocaleString("vi-VN")
+    ]);
+    addDataRows(categorySheet, categoryData);
+    createFooter(categorySheet, categoryData.length + 9);
+  
+    // 3. Order Status Sheet
+    const statusSheet = wb.addWorksheet('Tình Trạng Đơn Hàng');
+    createStyledHeader(
+      statusSheet, 
+      "BÁO CÁO TÌNH TRẠNG ĐƠN HÀNG", 
+      dateRange
     );
-
-    const orderStatusData = dashboardData.ordersByStatusResult.map((item) => ({
-      "Trạng thái": item.status,
-      "Số lượng đơn": item.total_orders.toLocaleString("vi-VN"),
-      "Doanh thu (VNĐ)": parseFloat(item.total_revenue).toLocaleString("vi-VN"),
-      "Giá trị TB/đơn": parseFloat(item.average_order_value).toLocaleString(
-        "vi-VN"
-      ),
-    }));
-
-    const statusSheet = [
-      ...statusHeader,
-      ["Trạng thái", "Số lượng đơn", "Doanh thu (VNĐ)", "Giá trị TB/đơn"],
-      ...orderStatusData.map(Object.values),
-      ...createFooter(),
-    ];
-
-    const summaryHeader = createHeader(
-      "TỔNG KẾT BÁO CÁO",
-      `${dateRange.startDate.format("DD/MM/YYYY")} - ${dateRange.endDate.format(
-        "DD/MM/YYYY"
-      )}`
+  
+    const statusHeaders = ["Trạng thái", "Số lượng đơn", "Doanh thu (VNĐ)", "Giá trị TB/đơn"];
+    createDataHeader(statusSheet, statusHeaders);
+  
+    const orderStatusData = dashboardData.ordersByStatusResult.map((item) => [
+      item.status,
+      item.total_orders.toLocaleString("vi-VN"),
+      parseFloat(item.total_revenue).toLocaleString("vi-VN"),
+      parseFloat(item.average_order_value).toLocaleString("vi-VN")
+    ]);
+    addDataRows(statusSheet, orderStatusData);
+    createFooter(statusSheet, orderStatusData.length + 9);
+  
+    // 4. Summary Sheet
+    const summarySheet = wb.addWorksheet('Tổng Kết');
+    createStyledHeader(
+      summarySheet, 
+      "TỔNG KẾT BÁO CÁO", 
+      dateRange
     );
-
+  
+    const summaryHeaders = ["Chỉ số", "Giá trị"];
+    createDataHeader(summarySheet, summaryHeaders);
+  
     const summaryData = [
-      ["Chỉ số", "Giá trị"],
       ["Tổng doanh thu", formatPrice(dashboardData.stats.totalRevenue)],
       [
         "Tổng đơn hàng",
@@ -261,38 +344,33 @@ const SalesDashboard = () => {
             (g) => g.month === moment().format("YYYY-MM")
           )?.growthRate || 0
         ).toFixed(2)}%`,
-      ],
+      ]
     ];
-
-    const summarySheet = [...summaryHeader, ...summaryData, ...createFooter()];
-
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(monthlyRevenueSheet),
-      "Doanh Thu Theo Tháng"
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(categorySheet),
-      "Doanh Thu Theo Danh Mục"
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(statusSheet),
-      "Tình Trạng Đơn Hàng"
-    );
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(summarySheet),
-      "Tổng Kết"
-    );
-
-    XLSX.writeFile(
-      wb,
-      `Bao_Cao_Doanh_Thu_${dateRange.startDate.format(
+    addDataRows(summarySheet, summaryData);
+    createFooter(summarySheet, summaryData.length + 9);
+  
+    // Auto-adjust column widths for readability
+    [monthlyRevenueSheet, categorySheet, statusSheet, summarySheet].forEach(sheet => {
+      sheet.columns.forEach(column => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 10;
+          maxLength = Math.max(maxLength, columnLength);
+        });
+        column.width = maxLength < 10 ? 10 : maxLength + 2;
+      });
+    });
+  
+    // Save the workbook
+    wb.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Bao_Cao_Doanh_Thu_${dateRange.startDate.format(
         "DD.MM.YYYY"
-      )}_${dateRange.endDate.format("DD.MM.YYYY")}.xlsx`
-    );
+      )}_${dateRange.endDate.format("DD.MM.YYYY")}.xlsx`;
+      link.click();
+    });
   };
 
   if (loading) return <div>Loading...</div>;

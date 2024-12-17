@@ -26,7 +26,7 @@ import { formatPrice } from "../../utils/FormatPrice";
 import { Link, useNavigate } from "react-router-dom";
 import OrderDashboardFilter from "../../utils/Filter";
 import moment from "moment";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 import EditProductModal from "./EditModal";
 const ITEMS_PER_PAGE = 10;
@@ -126,29 +126,120 @@ const ProductDashboard = () => {
   };
   const exportToExcel = () => {
     if (!revenueStats || !productStats || !salesByTime) return;
-
-    const wb = XLSX.utils.book_new();
-
-    const createHeader = (title, dateRange) => [
-      ["BÁO CÁO QUẢN LÝ SẢN PHẨM"],
-      [`${title}`],
-      [`Thời gian: ${dateRange || moment().format("DD/MM/YYYY")}`],
-      [],
-    ];
-
-    const createFooter = () => [
-      [],
-      ["Người lập báo cáo:", "", "", "Người duyệt:"],
-      ["", "", "", ""],
-      ["", "", "", ""],
-      [`Ngày lập: ${moment().format("DD/MM/YYYY")}`],
-    ];
-
-    // 1. Tổng quan sản phẩm
-    const summaryHeader = createHeader("TỔNG QUAN SẢN PHẨM");
-
+  
+    // Create a new workbook
+    const wb = new ExcelJS.Workbook();
+  
+    // Utility function to create a styled header
+    const createStyledHeader = (worksheet, title, dateRange) => {
+      // Merge cells for main title and center
+      worksheet.mergeCells('A1:F4');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = title;
+      titleCell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle', 
+        wrapText: true 
+      };
+      titleCell.font = { 
+        bold: true, 
+        size: 16, 
+        color: { argb: 'FFFFFF' } 
+      };
+      titleCell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: '4472C4' }
+      };
+  
+      // Date range
+      worksheet.mergeCells('A5:F5');
+      const dateCell = worksheet.getCell('A5');
+      dateCell.value = `Thời gian: ${dateRange || moment().format("DD/MM/YYYY")}`;
+      dateCell.alignment = { 
+        horizontal: 'center', 
+        vertical: 'middle' 
+      };
+      dateCell.font = { italic: true };
+    };
+  
+    // Utility function to create a styled data header
+    const createDataHeader = (worksheet, headers) => {
+      headers.forEach((header, index) => {
+        const cell = worksheet.getCell(7, index + 1);
+        cell.value = header;
+        cell.alignment = { 
+          horizontal: 'center', 
+          vertical: 'middle' 
+        };
+        cell.font = { 
+          bold: true, 
+          color: { argb: 'FFFFFF' } 
+        };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: '4472C4' }
+        };
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    };
+  
+    // Utility function to add data rows with borders
+    const addDataRows = (worksheet, data) => {
+      data.forEach((row, rowIndex) => {
+        row.forEach((value, colIndex) => {
+          const cell = worksheet.getCell(8 + rowIndex, colIndex + 1);
+          cell.value = value;
+          cell.alignment = { 
+            horizontal: 'center', 
+            vertical: 'middle' 
+          };
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+      });
+    };
+  
+    // Utility function to create footer
+    const createFooter = (worksheet, startRow) => {
+      const footerRows = [
+        [],
+        ["Người lập báo cáo:", "", "", "", "Người duyệt:"],
+        ["", "", "", "", ""],
+        ["", "", "", "", ""],
+        [`Ngày lập: ${moment().format("DD/MM/YYYY")}`]
+      ];
+  
+      footerRows.forEach((footerRow, index) => {
+        footerRow.forEach((value, colIndex) => {
+          const cell = worksheet.getCell(startRow + index, colIndex + 1);
+          cell.value = value;
+          cell.alignment = { 
+            horizontal: 'center', 
+            vertical: 'middle' 
+          };
+        });
+      });
+    };
+  
+    // 1. Tổng quan sản phẩm (Summary)
+    const summarySheet = wb.addWorksheet('Tổng Quan');
+    createStyledHeader(summarySheet, "TỔNG QUAN SẢN PHẨM");
+  
+    const summaryHeaders = ["Chỉ số", "Giá trị"];
+    createDataHeader(summarySheet, summaryHeaders);
+  
     const summaryData = [
-      ["Chỉ số", "Giá trị"],
       ["Tổng số sản phẩm", revenueStats.length.toString()],
       [
         "Tổng thành tiền",
@@ -167,155 +258,113 @@ const ProductDashboard = () => {
           .toString(),
       ],
     ];
-
-    const summarySheet = [...summaryHeader, ...summaryData, ...createFooter()];
-
-    // 2. Báo cáo top sản phẩm tồn kho
-    const stockHeader = createHeader("BÁO CÁO TOP SẢN PHẨM TỒN KHO");
-
-    const stockData = mostStock.map((item, index) => ({
-      "Xếp hạng": index + 1,
-      "Tên sản phẩm": item.name,
-      "Số lượng tồn": item.stock_quantity,
-      "Giá trị tồn": formatPrice(item.stock_quantity * item.price),
-    }));
-
-    const stockSheet = [
-      ...stockHeader,
-      ["Xếp hạng", "Tên sản phẩm", "Số lượng tồn", "Giá trị tồn"],
-      ...stockData.map(Object.values),
-      ...createFooter(),
-    ];
-
-    // 3. Báo cáo top doanh thu
-    const revenueHeader = createHeader("BÁO CÁO TOP THÀNH TIỀN");
-
-    const revenueData = mostRevenue.map((item, index) => ({
-      "Xếp hạng": index + 1,
-      "Tên sản phẩm": item.name,
-      "Số lượng bán": item.sold_quantity,
-      "Thành tiền": formatPrice(item.revenue),
-    }));
-
-    const revenueSheet = [
-      ...revenueHeader,
-      ["Xếp hạng", "Tên sản phẩm", "Số lượng bán", "Thành tiền"],
-      ...revenueData.map(Object.values),
-      ...createFooter(),
-    ];
-
-    // 4. Báo cáo bán hàng theo thời gian
-    const timeHeader = createHeader("BÁO CÁO BÁN HÀNG THEO THỜI GIAN");
-
-    const timeData = salesByTime.map((item) => ({
-      "Mã sản phẩm": item.product_id,
-      "Tên sản phẩm": item.product_name,
-      "Số lượng bán": item.total_sold_quantity,
-      "Ngày bán đầu": moment(item.first_sale_date).format("DD/MM/YYYY"),
-      "Ngày bán cuối": moment(item.last_sale_date).format("DD/MM/YYYY"),
-      "Thành tiền": formatPrice(item.total_revenue),
-    }));
-
-    const timeSheet = [
-      ...timeHeader,
-      [
-        "Mã sản phẩm",
-        "Tên sản phẩm",
-        "Số lượng bán",
-        "Ngày bán đầu",
-        "Ngày bán cuối",
-        "Doanh thu",
-      ],
-      ...timeData.map(Object.values),
-      ...createFooter(),
-    ];
-
-    // 5. Chi tiết sản phẩm
-    const detailHeader = createHeader("CHI TIẾT SẢN PHẨM");
-
-    const detailData = revenueStats.map((product) => ({
-      "Mã sản phẩm": product.id,
-      "Tên sản phẩm": product.name,
-      "Tồn kho": product.stock_quantity,
-      "Đã bán": product.sold_quantity,
-      "Doanh thu": formatPrice(product.revenue),
-      "Trạng thái":
-        product.status === 1 ? "Đang kinh doanh" : "Ngừng kinh doanh",
-    }));
-
-    const detailSheet = [
-      ...detailHeader,
-      [
-        "Mã sản phẩm",
-        "Tên sản phẩm",
-        "Tồn kho",
-        "Đã bán",
-        "Doanh thu",
-        "Trạng thái",
-      ],
-      ...detailData.map(Object.values),
-      ...createFooter(),
-    ];
-
-    //6. Báo cáo hàng đã nhập
-
-    const inventoryHeader = createHeader("BÁO CÁO HÀNG ĐÃ NHẬP THEO THỜI GIAN");
-
-    const inventoryData = inventory.map((item) => ({
-      "Mã sản phẩm": item.id,
-      "Tên sản phẩm": item.name,
-      "Số lượng nhập": item.total_stock,
-      "Ngày nhập": moment(item.created_at).format("DD/MM/YYYY"),
-    }));
-
-    const inventorySheet = [
-      ...inventoryHeader,
-      ["Mã sản phẩm", "Tên sản phẩm", "Số lượng nhập", "Ngày nhập"],
-      ...inventoryData.map(Object.values),
-      ...createFooter(),
-    ];
-
-    // Thêm các sheet vào workbook
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(summarySheet),
-      "Tổng Quan"
-    );
-
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(stockSheet),
-      "Top Tồn Kho"
-    );
-
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(revenueSheet),
-      "Top Doanh Thu"
-    );
-
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(timeSheet),
-      "Bán Theo Thời Gian"
-    );
-
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(detailSheet),
-      "Chi Tiết Sản Phẩm"
-    );
-
-    XLSX.utils.book_append_sheet(
-      wb,
-      XLSX.utils.aoa_to_sheet(inventorySheet),
-      "Hàng Đã Nhập"
-    );
-
-    XLSX.writeFile(
-      wb,
-      `Bao_Cao_San_Pham_${moment().format("DD.MM.YYYY")}.xlsx`
-    );
+    addDataRows(summarySheet, summaryData);
+    createFooter(summarySheet, summaryData.length + 9);
+  
+    // 2. Top sản phẩm tồn kho (Stock)
+    const stockSheet = wb.addWorksheet('Top Tồn Kho');
+    createStyledHeader(stockSheet, "BÁO CÁO TOP SẢN PHẨM TỒN KHO");
+  
+    const stockHeaders = ["Xếp hạng", "Tên sản phẩm", "Số lượng tồn", "Giá trị tồn"];
+    createDataHeader(stockSheet, stockHeaders);
+  
+    const stockData = mostStock.map((item, index) => [
+      index + 1,
+      item.name,
+      item.stock_quantity,
+      formatPrice(item.stock_quantity * item.price)
+    ]);
+    addDataRows(stockSheet, stockData);
+    createFooter(stockSheet, stockData.length + 9);
+  
+    // 3. Top doanh thu (Revenue)
+    const revenueSheet = wb.addWorksheet('Top Doanh Thu');
+    createStyledHeader(revenueSheet, "BÁO CÁO TOP THÀNH TIỀN");
+  
+    const revenueHeaders = ["Xếp hạng", "Tên sản phẩm", "Số lượng bán", "Thành tiền"];
+    createDataHeader(revenueSheet, revenueHeaders);
+  
+    const revenueData = mostRevenue.map((item, index) => [
+      index + 1,
+      item.name,
+      item.sold_quantity,
+      formatPrice(item.revenue)
+    ]);
+    addDataRows(revenueSheet, revenueData);
+    createFooter(revenueSheet, revenueData.length + 9);
+  
+    // 4. Bán hàng theo thời gian (Sales by Time)
+    const timeSheet = wb.addWorksheet('Bán Theo Thời Gian');
+    createStyledHeader(timeSheet, "BÁO CÁO BÁN HÀNG THEO THỜI GIAN");
+  
+    const timeHeaders = ["Mã sản phẩm", "Tên sản phẩm", "Số lượng bán", "Ngày bán đầu", "Ngày bán cuối", "Doanh thu"];
+    createDataHeader(timeSheet, timeHeaders);
+  
+    const timeData = salesByTime.map((item) => [
+      item.product_id,
+      item.product_name,
+      item.total_sold_quantity,
+      moment(item.first_sale_date).format("DD/MM/YYYY"),
+      moment(item.last_sale_date).format("DD/MM/YYYY"),
+      formatPrice(item.total_revenue)
+    ]);
+    addDataRows(timeSheet, timeData);
+    createFooter(timeSheet, timeData.length + 9);
+  
+    // 5. Chi tiết sản phẩm (Product Details)
+    const detailSheet = wb.addWorksheet('Chi Tiết Sản Phẩm');
+    createStyledHeader(detailSheet, "CHI TIẾT SẢN PHẨM");
+  
+    const detailHeaders = ["Mã sản phẩm", "Tên sản phẩm", "Tồn kho", "Đã bán", "Doanh thu", "Trạng thái"];
+    createDataHeader(detailSheet, detailHeaders);
+  
+    const detailData = revenueStats.map((product) => [
+      product.id,
+      product.name,
+      product.stock_quantity,
+      product.sold_quantity,
+      formatPrice(product.revenue),
+      product.status === 1 ? "Đang kinh doanh" : "Ngừng kinh doanh"
+    ]);
+    addDataRows(detailSheet, detailData);
+    createFooter(detailSheet, detailData.length + 9);
+  
+    // 6. Báo cáo hàng đã nhập (Inventory)
+    const inventorySheet = wb.addWorksheet('Hàng Đã Nhập');
+    createStyledHeader(inventorySheet, "BÁO CÁO HÀNG ĐÃ NHẬP THEO THỜI GIAN");
+  
+    const inventoryHeaders = ["Mã sản phẩm", "Tên sản phẩm", "Số lượng nhập", "Ngày nhập"];
+    createDataHeader(inventorySheet, inventoryHeaders);
+  
+    const inventoryData = inventory.map((item) => [
+      item.id,
+      item.name,
+      item.total_stock,
+      moment(item.created_at).format("DD/MM/YYYY")
+    ]);
+    addDataRows(inventorySheet, inventoryData);
+    createFooter(inventorySheet, inventoryData.length + 9);
+  
+    // Auto-adjust column widths for readability
+    [summarySheet, stockSheet, revenueSheet, timeSheet, detailSheet, inventorySheet].forEach(sheet => {
+      sheet.columns.forEach(column => {
+        let maxLength = 0;
+        column.eachCell({ includeEmpty: true }, (cell) => {
+          const columnLength = cell.value ? cell.value.toString().length : 10;
+          maxLength = Math.max(maxLength, columnLength);
+        });
+        column.width = maxLength < 10 ? 10 : maxLength + 2;
+      });
+    });
+  
+    // Save the workbook
+    wb.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `Bao_Cao_San_Pham_${moment().format("DD.MM.YYYY")}.xlsx`;
+      link.click();
+    });
   };
 
   const filterProducts = (items) => {
