@@ -10,6 +10,7 @@ import {
 import { formatPrice } from "../../../utils/FormatPrice";
 import { useParams, useNavigate } from "react-router-dom";
 import moment from "moment";
+import io from "socket.io-client";
 
 const STATUS_DISPLAY_MAP = {
   "Return Request": "Yêu cầu trả hàng",
@@ -51,26 +52,92 @@ const OrderDetail = () => {
   const API = process.env.REACT_APP_API_ENDPOINT;
   const navigate = useNavigate();
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-
+  const [socket, setSocket] = useState(null);
   useEffect(() => {
-    const fetchOrderDetail = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`${API}/api/orders/${id}`);
-        if (!response.ok) {
-          alert("Không thể tải chi tiết đơn hàng");
-          throw new Error("Failed to fetch order detail");
-        }
-        const data = await response.json();
-        setOrder(data.data);
-        console.log(data.data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
+    // Create socket connection
+    const newSocket = io(API, {
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 5000,
+      auth: {
+        token: localStorage.getItem("token"), // Add authentication if needed
+      },
+    });
+    setSocket(newSocket);
+
+    // Socket connection event handlers
+    const handleConnect = () => {
+      console.log("Socket connected successfully");
+      console.log("Socket ID:", newSocket.id);
+
+      // Register user after successful connection
+      const userId = localStorage.getItem("userId");
+      if (userId) {
+        newSocket.emit("register", { userId }, (response) => {
+          console.log("Register response:", response);
+        });
       }
     };
 
+    const handleConnectError = (error) => {
+      console.error("Socket connection error:", error);
+      // Optional: Add user-friendly error handling or notification
+    };
+
+    const handleDisconnect = (reason) => {
+      console.log("Socket disconnected:", reason);
+      // Optional: Implement reconnection logic or show user a reconnection message
+    };
+
+    // Listen for order updates
+    const handleOrderUpdated = async (updatedOrder) => {
+      console.log("Received order update:", updatedOrder);
+      const response = await fetch(`${API}/api/orders/${id}`);
+      if (!response.ok) {
+        alert("Không thể tải chi tiết đơn hàng");
+        throw new Error("Failed to fetch order detail");
+      }
+      const data = await response.json();
+      setOrder(data.data);
+      console.log(data.data);
+      
+      // Update order in state
+    };
+
+    // Attach event listeners
+    newSocket.on("connect", handleConnect);
+    newSocket.on("connect_error", handleConnectError);
+    newSocket.on("disconnect", handleDisconnect);
+    newSocket.on("orderUpdated", handleOrderUpdated);
+
+    // Cleanup on component unmount
+    return () => {
+      newSocket.off("connect", handleConnect);
+      newSocket.off("connect_error", handleConnectError);
+      newSocket.off("disconnect", handleDisconnect);
+      newSocket.off("orderUpdated", handleOrderUpdated);
+      newSocket.disconnect();
+    };
+  }, []);
+  const fetchOrderDetail = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API}/api/orders/${id}`);
+      if (!response.ok) {
+        alert("Không thể tải chi tiết đơn hàng");
+        throw new Error("Failed to fetch order detail");
+      }
+      const data = await response.json();
+      setOrder(data.data);
+      console.log(data.data);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  useEffect(() => {
     fetchOrderDetail();
   }, []);
 
@@ -91,7 +158,6 @@ const OrderDetail = () => {
       }
 
       alert("Cập nhật trạng thái đơn hàng thành công");
-      window.location.reload();
     } catch (error) {
       console.error("Failed to update order status:", error);
     }
@@ -728,7 +794,13 @@ const OrderDetail = () => {
           {order.status === "Delivered" &&
           (order.isGet === 1 || order.isGet === 0) &&
           !order.returnReason ? (
-            <span className={`px-3 py-1 rounded-full text-sm ${order.isGet === 1 ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+            <span
+              className={`px-3 py-1 rounded-full text-sm ${
+                order.isGet === 1
+                  ? "bg-green-100 text-green-800"
+                  : "bg-red-100 text-red-800"
+              }`}
+            >
               {order.isGet === 1 ? "Đã nhận hàng" : "Chưa nhận hàng"}
             </span>
           ) : (

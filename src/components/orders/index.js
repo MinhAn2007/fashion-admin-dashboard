@@ -145,7 +145,6 @@ const OrderManagementDashboard = () => {
     if (showNeedAttention) {
       orders = orders.filter(
         (order) =>
-          order.status === "Returned" ||
           order.status === "Pending Confirmation" ||
           (order.returnReason && order.status === "Pending Confirmation")
       );
