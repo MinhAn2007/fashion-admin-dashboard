@@ -12,6 +12,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import moment from "moment";
 
 const STATUS_DISPLAY_MAP = {
+  "Return Request": "Yêu cầu trả hàng",
   "Pending Confirmation": "Chờ xác nhận",
   "In Transit": "Đang giao hàng",
   Cancelled: "Đã hủy",
@@ -21,6 +22,7 @@ const STATUS_DISPLAY_MAP = {
 };
 
 const STATUS_COLORS = {
+  "Return Request": "bg-orange-100",
   "Pending Confirmation": "bg-yellow-100 text-yellow-800",
   "In Transit": "bg-blue-100 text-blue-800",
   Cancelled: "bg-red-100 text-red-800",
@@ -113,7 +115,56 @@ const OrderDetail = () => {
   if (!order) return null;
 
   const renderStatusActions = () => {
+    if (order.status === "Returned" && order.returnReason) {
+      return null;
+    }
     const actions = STATUS_ACTIONS[order.status] || [];
+    if (order.status === "Delivered" && order.returnReason) {
+      return (
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleStatusUpdate("Returned")}
+            disabled={isUpdatingStatus}
+            className={`flex items-center px-4 py-2 text-white rounded-lg ${
+              isUpdatingStatus
+                ? "bg-green-400 cursor-not-allowed"
+                : "bg-green-600 hover:bg-green-700"
+            }`}
+          >
+            {isUpdatingStatus ? (
+              <div className="flex items-center">
+                <svg
+                  className="animate-spin h-4 w-4 mr-2 text-white"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                Đang xử lý...
+              </div>
+            ) : (
+              <>
+                <CheckCircle className="w-4 h-4 mr-2" />
+                Xác nhận đã nhận hàng trả
+              </>
+            )}
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="flex gap-2">
         {actions.includes("confirm") && (
@@ -367,10 +418,23 @@ const OrderDetail = () => {
         <div className="flex items-center justify-between">
           <span
             className={`px-3 py-1 rounded-full text-sm ${
-              STATUS_COLORS[order.status]
+              STATUS_COLORS[
+                order.status === "Delivered" && order.returnReason
+                  ? "Delivered"
+                  : order.returnReason &&
+                    order.status === "Pending Confirmation"
+                  ? "Return Request"
+                  : order.status
+              ]
             }`}
           >
-            {STATUS_DISPLAY_MAP[order.status]}
+            {STATUS_DISPLAY_MAP[
+              order.status === "Delivered" && order.returnReason
+                ? "Delivered"
+                : order.returnReason && order.status === "Pending Confirmation"
+                ? "Return Request"
+                : order.status
+            ] || order.status}
           </span>
           <div className="text-right">
             <p className="text-sm text-gray-500">Cập nhật lần cuối:</p>
@@ -423,7 +487,7 @@ const OrderDetail = () => {
             </p>
           </div>
         </div>
-        {(order.status === "Cancelled" || order.status === "Returned") && (
+        {(order.returnReason || order.cancelReason) && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-semibold mb-4">
               {order.status === "Cancelled"
@@ -498,7 +562,9 @@ const OrderDetail = () => {
               <div className="flex justify-between">
                 <span className="text-gray-500">Giảm giá:</span>
                 <div className="flex items-center space-x-2">
-                  <span className="text-gray-500">{order.couponCode ? order.couponCode : ''}</span>
+                  <span className="text-gray-500">
+                    {order.couponCode ? order.couponCode : ""}
+                  </span>
                   {order.couponType === "percent" ? (
                     <span className="text-gray-900">-{order.couponValue}%</span>
                   ) : (
@@ -512,7 +578,9 @@ const OrderDetail = () => {
                 <span className="text-gray-500">
                   Giảm giá qua hình thức thanh toán:
                 </span>{" "}
-                <span>{order.paymentMethod === 'ONLINE' ? "- 50.000 đ" : "0 đ"}</span>
+                <span>
+                  {order.paymentMethod === "ONLINE" ? "- 50.000 đ" : "0 đ"}
+                </span>
               </div>
               <div className="flex justify-between font-semibold text-lg pt-2 border-t">
                 <span>Tổng cộng:</span>
