@@ -56,6 +56,7 @@ const OrderDetail = () => {
   useEffect(() => {
     // Create socket connection
     const newSocket = io(API, {
+      path: "/api/socket.io",
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
@@ -101,7 +102,7 @@ const OrderDetail = () => {
       const data = await response.json();
       setOrder(data.data);
       console.log(data.data);
-      
+
       // Update order in state
     };
 
@@ -160,6 +161,9 @@ const OrderDetail = () => {
       alert("Cập nhật trạng thái đơn hàng thành công");
     } catch (error) {
       console.error("Failed to update order status:", error);
+    }
+    finally {
+      setIsUpdatingStatus(false);
     }
   };
 
