@@ -38,6 +38,7 @@ const STATUS_DISPLAY_MAP = {
   Completed: "Hoàn thành",
   Delivered: "Đã giao hàng",
   Returned: "Đã trả hàng",
+  Processing: "Đang xử lý",
 };
 
 const STATUS_COLORS = {
@@ -48,6 +49,7 @@ const STATUS_COLORS = {
   Completed: "bg-green-100",
   Delivered: "bg-green-100",
   Returned: "bg-red-100",
+  Processing: "bg-yellow-100",
 };
 
 const CustomTooltip = ({ active, payload }) => {
