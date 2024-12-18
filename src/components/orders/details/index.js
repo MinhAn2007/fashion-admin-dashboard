@@ -11,6 +11,7 @@ import { formatPrice } from "../../../utils/FormatPrice";
 import { useParams, useNavigate } from "react-router-dom";
 import moment from "moment";
 import io from "socket.io-client";
+import Ably from "ably";
 
 const STATUS_DISPLAY_MAP = {
   "Return Request": "Yêu cầu trả hàng",
@@ -54,73 +55,41 @@ const OrderDetail = () => {
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [socket, setSocket] = useState(null);
   useEffect(() => {
-    // Create socket connection
-    const newSocket = io(API, {
-      path: "/api/socket.io",
-      reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      timeout: 5000,
-      auth: {
-        token: localStorage.getItem("token"), // Add authentication if needed
-      },
+    // Kết nối với Ably
+    const ably = new Ably.Realtime(
+      "O4RrtQ.Xf-a8Q:0XE5QAwysrz56KobTV-_c0YyQJVSRHid8Z7sWs4b6DU"
+    );
+    const channel = ably.channels.get("orders");
+
+    ably.connection.on("connected", () => {
+      console.log("Kết nối Ably thành công");
     });
-    setSocket(newSocket);
 
-    // Socket connection event handlers
-    const handleConnect = () => {
-      console.log("Socket connected successfully");
-      console.log("Socket ID:", newSocket.id);
+    ably.connection.on("disconnected", () => {
+      console.log("Kết nối Ably đã bị ngắt");
+    });
 
-      // Register user after successful connection
-      const userId = localStorage.getItem("userId");
-      if (userId) {
-        newSocket.emit("register", { userId }, (response) => {
-          console.log("Register response:", response);
-        });
+    ably.connection.on("failed", (error) => {
+      console.error("Kết nối Ably thất bại:", error);
+    });
+
+    channel.subscribe("order-status-updated", async (message) => {
+      console.log("Thông điệp cập nhật trạng thái đơn hàng:", message);
+
+      try {
+        const response = await fetch(`${API}/api/orders/${id}`);
+        if (!response.ok) throw new Error("Failed to fetch orders");
+
+        const data = await response.json();
+        setOrder(data.data);
+      } catch (error) {
+        console.error("Lỗi khi lấy đơn hàng:", error);
       }
-    };
+    });
 
-    const handleConnectError = (error) => {
-      console.error("Socket connection error:", error);
-      // Optional: Add user-friendly error handling or notification
-    };
 
-    const handleDisconnect = (reason) => {
-      console.log("Socket disconnected:", reason);
-      // Optional: Implement reconnection logic or show user a reconnection message
-    };
+  }, [API, id]);
 
-    // Listen for order updates
-    const handleOrderUpdated = async (updatedOrder) => {
-      console.log("Received order update:", updatedOrder);
-      const response = await fetch(`${API}/api/orders/${id}`);
-      if (!response.ok) {
-        alert("Không thể tải chi tiết đơn hàng");
-        throw new Error("Failed to fetch order detail");
-      }
-      const data = await response.json();
-      setOrder(data.data);
-      console.log(data.data);
-
-      // Update order in state
-    };
-
-    // Attach event listeners
-    newSocket.on("connect", handleConnect);
-    newSocket.on("connect_error", handleConnectError);
-    newSocket.on("disconnect", handleDisconnect);
-    newSocket.on("orderUpdated", handleOrderUpdated);
-
-    // Cleanup on component unmount
-    return () => {
-      newSocket.off("connect", handleConnect);
-      newSocket.off("connect_error", handleConnectError);
-      newSocket.off("disconnect", handleDisconnect);
-      newSocket.off("orderUpdated", handleOrderUpdated);
-      newSocket.disconnect();
-    };
-  }, []);
   const fetchOrderDetail = async () => {
     try {
       setLoading(true);
@@ -161,8 +130,7 @@ const OrderDetail = () => {
       alert("Cập nhật trạng thái đơn hàng thành công");
     } catch (error) {
       console.error("Failed to update order status:", error);
-    }
-    finally {
+    } finally {
       setIsUpdatingStatus(false);
     }
   };
